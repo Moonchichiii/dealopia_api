@@ -1,0 +1,82 @@
+# Backend Requirements for Dealopia API
+
+# Core Django
+Django
+djangorestframework
+djangorestframework-simplejwt
+
+# Admin & CMS
+wagtail
+django-unfold
+
+# Database
+psycopg2-binary
+dj-database-url
+
+# GIS Support
+GDAL
+django-leaflet
+
+# Cache & Task Queue
+redis
+celery
+django-redis
+kombu
+
+# Authentication & Social Auth
+django-allauth
+django-oauth-toolkit
+social-auth-app-django
+
+# API Enhancements
+drf-spectacular
+django-filter
+django-cors-headers
+
+# Storage & Media
+django-storages
+Pillow
+python-magic
+cloudinary
+
+# Internationalization
+django-rosetta
+django-parler
+django-modeltranslation
+
+# Performance & Monitoring
+django-prometheus
+django-debug-toolbar
+scout-apm
+sentry-sdk
+
+# Async Support
+uvicorn
+httpx
+asgiref
+
+# Web Scraping
+beautifulsoup4
+requests
+pyppeteer
+selenium
+
+# Security
+django-csp
+django-axes
+django-honeypot
+
+# Testing
+pytest
+pytest-django
+factory-boy
+coverage
+locust
+
+# Utilities
+python-dateutil
+python-dotenv
+python-decouple
+django-extensions
+django-lifecycle
+rich
