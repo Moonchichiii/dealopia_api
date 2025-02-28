@@ -8,12 +8,12 @@ Dealopia is a community-focused platform for discovering the best local deals on
 
 ## 📋 Table of Contents
 
-- [Overview](#overview)
-- [Technologies](#technologies)
-- [Project Structure](#project-structure)
-- [Features](#features)
-- [Getting Started](#getting-started)
-- [Testing](#testing)
+- [🔍 Overview](#-overview)
+- [🛠️ Technologies](#️-technologies)
+- [📂 Project Structure](#-project-structure)
+- [⚡ Features](#-features)
+- [🚦 Getting Started](#-getting-started)
+- [🧪 Testing](#-testing)
 
 ## ✨ Overview
 
@@ -67,7 +67,7 @@ dealopia/
 
 ### 1. Install Dependencies
 
-```
+```bash
 pip install -r requirements.txt
 ```
 
@@ -77,13 +77,13 @@ pip install -r requirements.txt
 - Update your `.env` file with your database settings
 - Run migrations:
 
-```
+```bash
 python manage.py migrate
 ```
 
 ### 3. Run the Development Server
 
-```
+```bash
 python manage.py runserver
 ```
 
@@ -91,7 +91,7 @@ python manage.py runserver
 
 - Start a Celery worker to handle asynchronous tasks:
 
-```
+```bash
 celery -A backend worker -l info
 ```
 
@@ -99,13 +99,13 @@ celery -A backend worker -l info
 
 ### Unit Tests
 
-```
+```bash
 python manage.py test
 ```
 
 Run specific test cases:
 
-```
+```bash
 python manage.py test apps.deals.tests
 ```
 
@@ -113,7 +113,7 @@ python manage.py test apps.deals.tests
 
 End-to-end test coverage for critical API workflows:
 
-```
+```bash
 pytest
 ```
 
@@ -121,9 +121,8 @@ pytest
 
 Load testing with Locust to ensure API performance under stress:
 
-```
+```bash
 locust -f tests/locust/locustfile.py
 ```
 
 Then access the Locust web interface at `http://localhost:8089` to configure and start your tests.
-
