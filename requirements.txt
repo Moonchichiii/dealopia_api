@@ -80,3 +80,7 @@ python-decouple
 django-extensions
 django-lifecycle
 rich
+
+
+psycopg2-binary
+django-pgfields
