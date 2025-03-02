@@ -3,8 +3,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
-from backend.apps.locations.models import Location
-from backend.api.v1.serializers.locations import LocationSerializer
+from apps.locations.models import Location
+from api.v1.serializers.locations import LocationSerializer
 
 class LocationViewSet(viewsets.ModelViewSet):
     queryset = Location.objects.all()

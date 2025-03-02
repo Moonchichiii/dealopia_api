@@ -1,0 +1,28 @@
+global:
+  scrape_interval: 60s
+  evaluation_interval: 60s
+
+scrape_configs:
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['db:5432']
+    metrics_path: '/metrics'
+    scheme: 'postgres'
+    params:
+      auth_db: [postgres]
+      user: [postgres]
+      password: [postgres]
+
+  - job_name: 'services'
+    static_configs:
+      - targets: 
+          - 'prometheus:9090'
+          - 'grafana:3000'
+              deploy:
+      resources:
+        limits:
+          memory: 256M  # For PostgreSQL
+          # memory: 128M  # For Prometheus/Grafana
+              environment:
+      GF_PATHS_DATA: /var/lib/grafana  # Reduce Grafana storage
+      PROMETHEUS_STORAGE_TSDB_RETENTION: 7d  # Keep only 7 days of metrics

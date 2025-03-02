@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  # Database Service
+  db:
+    image: postgis/postgis:13-3.1-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGIS_ENABLED=true
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M  # For PostgreSQL
+
+  # Monitoring Stack
+  prometheus:
+    image: prom/prometheus:v2.33-alpine
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prom_data:/prometheus
+    networks:
+      - backend
+    ports:
+      - "9090:9090"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - PROMETHEUS_STORAGE_TSDB_RETENTION=7d  # Keep only 7 days of metrics
+    deploy:
+      resources:
+        limits:
+          memory: 128M  # For Prometheus
+
+  grafana:
+    image: grafana/grafana:8.5-alpine
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - backend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    environment:
+      - GF_PATHS_DATA=/var/lib/grafana  # Reduce Grafana storage
+    deploy:
+      resources:
+        limits:
+          memory: 128M  # For Grafana
+
+volumes:
+  postgres_data:
+  prom_data:
+  grafana_data:
+
+networks:
+  backend:
+    driver: bridge

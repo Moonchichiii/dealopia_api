@@ -4,6 +4,7 @@
 Django
 djangorestframework
 djangorestframework-simplejwt
+django-otp
 
 # Admin & CMS
 wagtail
@@ -84,3 +85,6 @@ rich
 
 psycopg2-binary
 django-pgfields
+
+
+

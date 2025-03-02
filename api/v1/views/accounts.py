@@ -1,8 +1,8 @@
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from backend.apps.accounts.models import User
-from backend.api.v1.serializers.accounts import UserSerializer, UserCreateSerializer
+from apps.accounts.models import User
+from api.v1.serializers.accounts import UserSerializer, UserCreateSerializer
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()

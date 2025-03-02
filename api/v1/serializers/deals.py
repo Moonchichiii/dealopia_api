@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from backend.apps.deals.models import Deal
+from apps.deals.models import Deal
 
 class DealSerializer(serializers.ModelSerializer):
     shop_name = serializers.ReadOnlyField(source='shop.name')

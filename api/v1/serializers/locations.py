@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from backend.apps.locations.models import Location
+from apps.locations.models import Location
 
 class LocationSerializer(serializers.ModelSerializer):
     latitude = serializers.SerializerMethodField()

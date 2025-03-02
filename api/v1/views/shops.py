@@ -2,9 +2,9 @@ from rest_framework import viewsets, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
-from backend.apps.shops.models import Shop
-from backend.api.v1.serializers.shops import ShopSerializer
-from backend.api.v1.serializers.deals import DealSerializer
+from apps.shops.models import Shop
+from api.v1.serializers.shops import ShopSerializer
+from api.v1.serializers.deals import DealSerializer
 
 class ShopViewSet(viewsets.ModelViewSet):
     queryset = Shop.objects.all()

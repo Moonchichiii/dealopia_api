@@ -1,7 +1,7 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from backend.apps.deals.models import Deal
-from backend.apps.deals.tasks import send_deal_notifications
+from apps.deals.models import Deal
+from apps.deals.tasks import send_deal_notifications
 
 @receiver(post_save, sender=Deal)
 def handle_deal_post_save(sender, instance, created, **kwargs):

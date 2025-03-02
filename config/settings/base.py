@@ -1,5 +1,10 @@
+"""
+Base settings for Dealopia API project.
+Contains common settings shared across all environments.
+"""
 import os
 from pathlib import Path
+from datetime import timedelta
 from decouple import config
 from django.utils.translation import gettext_lazy as _
 
@@ -8,12 +13,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-your-secret-key-here')
-
+ALLOWED_HOSTS = config(
+    'ALLOWED_HOSTS', 
+    default='', 
+    cast=lambda v: [s.strip() for s in v.split(',') if s]
+)
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
-
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='', cast=lambda v: [s.strip() for s in v.split(',') if s])
-
 # Application definition
 INSTALLED_APPS = [
     # Django apps
@@ -27,9 +33,11 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.gis',
+    'django.contrib.sites',
     
     # Third-party apps
     'rest_framework',
+    'rest_framework.authtoken',  # Add this line
     'rest_framework_simplejwt',
     'drf_spectacular',
     'wagtail',
@@ -38,6 +46,15 @@ INSTALLED_APPS = [
     'leaflet',
     'django_filters',
     'django_extensions',
+    'dj_rest_auth',
+    'dj_rest_auth.registration',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+    'django_otp',
+    'django_otp.plugins.otp_totp',
+    'django_prometheus',
     
     # Dealopia apps
     'apps.accounts',
@@ -49,6 +66,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
@@ -56,12 +74,17 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django_otp.middleware.OTPMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'core.middleware.performance.PerformanceMiddleware',
     'core.middleware.security.SecurityMiddleware',
     'core.middleware.language.UserLanguageMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
 ]
+
+# Site ID is required for django-allauth
+SITE_ID = 1
 
 ROOT_URLCONF = 'config.urls'
 
@@ -83,31 +106,22 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# Database
+# Database configurations remain the same
 DATABASES = {
     'default': {
-        'ENGINE': 'django.contrib.gis.db.backends.spatialite',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        'NAME': 'dealopia',
+        'USER': 'postgres',
+        'PASSWORD': config('DB_PASSWORD'),
+        'HOST': 'localhost',
+        'PORT': '5433',
     }
 }
 
 # GeoDjango settings
 SPATIALITE_LIBRARY_PATH = 'mod_spatialite'
-
-# Configure GDAL
-gdal_path = None
-for version in range(312, 300, -1):  # Try versions from 312 down to 301
-    test_path = f'C:\\OSGeo4W\\bin\\gdal{version}.dll'
-    if os.path.exists(test_path):
-        gdal_path = test_path
-        break
-
-if gdal_path:
-    os.environ['GDAL_LIBRARY_PATH'] = gdal_path
-    # Also set the GEOS path to avoid issues
-    geos_path = os.path.join(os.path.dirname(gdal_path), 'geos_c.dll')
-    if os.path.exists(geos_path):
-        os.environ['GEOS_LIBRARY_PATH'] = geos_path
+GDAL_LIBRARY_PATH = 'C:/OSGeo4W/bin/gdal310.dll'
+GEOS_LIBRARY_PATH = 'C:/OSGeo4W/bin/geos_c.dll'
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -128,7 +142,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Custom user model
 AUTH_USER_MODEL = 'accounts.User'
 
-# Internationalization
+# Internationalization settings remain the same
 LANGUAGE_CODE = 'en'
 TIME_ZONE = 'UTC'
 USE_I18N = True
@@ -148,22 +162,39 @@ LOCALE_PATHS = [
     os.path.join(BASE_DIR, 'locale'),
 ]
 
-# Static files (CSS, JavaScript, Images)
+# Static files and Media settings remain the same
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static_collected')
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 
-# Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# JWT settings
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': True,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'VERIFYING_KEY': None,
+    'AUDIENCE': None,
+    'ISSUER': None,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+}
 
 # REST Framework settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
@@ -176,6 +207,39 @@ REST_FRAMEWORK = {
     ),
 }
 
+# dj-rest-auth settings
+REST_AUTH = {
+    'USE_JWT': True,
+    'JWT_AUTH_COOKIE': 'auth-token',
+    'JWT_AUTH_REFRESH_COOKIE': 'refresh-token',
+    'JWT_AUTH_HTTPONLY': True,
+    'TOKEN_MODEL': None,
+}
+
+# django-allauth settings
+ACCOUNT_LOGIN_METHODS = {'email'}
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_UNIQUE_EMAIL = True
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+ACCOUNT_CONFIRM_EMAIL_ON_GET = True
+ACCOUNT_EMAIL_SUBJECT_PREFIX = '[Dealopia] '
+LOGIN_URL = '/api/v1/auth/login/'
+LOGIN_REDIRECT_URL = '/'
+
+# Social account settings
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        }
+    }
+}
+
 # DRF Spectacular settings
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Dealopia API',
@@ -183,7 +247,7 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
 }
 
-# Leaflet configuration
+# Other settings remain the same
 LEAFLET_CONFIG = {
     'DEFAULT_CENTER': (0, 0),
     'DEFAULT_ZOOM': 2,
@@ -210,7 +274,8 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 
-# Unfold Admin settings
+
+# Unfold Admin settings remain the same
 UNFOLD = {
     "SITE_TITLE": "Dealopia Admin",
     "SITE_HEADER": "Dealopia",
@@ -268,9 +333,6 @@ UNFOLD = {
             "200": "186 230 253",
             "300": "125 211 252",
             "400": "56 189 248",
-            "500": "14 165 233",
-            "600": "2 132 199",
-            "700": "3 105 161",
             "800": "7 89 133",
             "900": "12 74 110",
             "950": "8 47 73",
