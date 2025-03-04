@@ -4,7 +4,7 @@ from apps.accounts.models import User
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 
+        fields = ['id', 'email', 'first_name', 'last_name',
                   'phone_number', 'avatar', 'preferred_language',
                   'location', 'favorite_categories', 'notification_preferences']
         read_only_fields = ['id']
@@ -15,7 +15,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'password_confirm', 
+        fields = ['email', 'password', 'password_confirm',
                   'first_name', 'last_name', 'phone_number']
     
     def validate(self, attrs):

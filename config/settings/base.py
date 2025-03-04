@@ -37,7 +37,7 @@ INSTALLED_APPS = [
     
     # Third-party apps
     'rest_framework',
-    'rest_framework.authtoken',  # Add this line
+    'rest_framework.authtoken',
     'rest_framework_simplejwt',
     'drf_spectacular',
     'wagtail',
@@ -216,16 +216,20 @@ REST_AUTH = {
     'TOKEN_MODEL': None,
 }
 
-# django-allauth settings
-ACCOUNT_LOGIN_METHODS = {'email'}
+# Django allauth settings
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
-ACCOUNT_CONFIRM_EMAIL_ON_GET = True
+ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True 
 ACCOUNT_EMAIL_SUBJECT_PREFIX = '[Dealopia] '
+ACCOUNT_LOGIN_METHODS = {'email'}
+
+# Authentication URLs
 LOGIN_URL = '/api/v1/auth/login/'
 LOGIN_REDIRECT_URL = '/'
+
 
 # Social account settings
 SOCIALACCOUNT_PROVIDERS = {
@@ -292,35 +296,40 @@ UNFOLD = {
                 "icon": "person",
                 "models": [
                     "accounts.user",
-                ]
+                ],
+                "items": []  # Add this empty items list
             },
             {
                 "title": "Deals",
                 "icon": "shopping_bag",
                 "models": [
                     "deals.deal",
-                ]
+                ],
+                "items": []  # Add this empty items list
             },
             {
                 "title": "Shops",
                 "icon": "store",
                 "models": [
                     "shops.shop",
-                ]
+                ],
+                "items": []  # Add this empty items list
             },
             {
                 "title": "Categories",
                 "icon": "category",
                 "models": [
                     "categories.category",
-                ]
+                ],
+                "items": []  # Add this empty items list
             },
             {
                 "title": "Locations",
                 "icon": "location_on",
                 "models": [
                     "locations.location",
-                ]
+                ],
+                "items": []  # Add this empty items list
             },
         ]
     },

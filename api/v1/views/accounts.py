@@ -7,6 +7,7 @@ from api.v1.serializers.accounts import UserSerializer, UserCreateSerializer
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    lookup_field = 'email'
     
     def get_serializer_class(self):
         if self.action == 'create':
