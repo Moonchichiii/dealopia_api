@@ -11,15 +11,15 @@ from django.utils.translation import gettext_lazy as _
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
+# Security settings
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-your-secret-key-here')
 ALLOWED_HOSTS = config(
     'ALLOWED_HOSTS', 
     default='', 
     cast=lambda v: [s.strip() for s in v.split(',') if s]
 )
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
+
 # Application definition
 INSTALLED_APPS = [
     # Django apps
@@ -83,7 +83,7 @@ MIDDLEWARE = [
     'allauth.account.middleware.AccountMiddleware',
 ]
 
-# Site ID is required for django-allauth
+# Site ID for django-allauth
 SITE_ID = 1
 
 ROOT_URLCONF = 'config.urls'
@@ -106,7 +106,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# Database configurations remain the same
+# Database configuration
 DATABASES = {
     'default': {
         'ENGINE': 'django.contrib.gis.db.backends.postgis',
@@ -115,6 +115,10 @@ DATABASES = {
         'PASSWORD': config('DB_PASSWORD'),
         'HOST': 'localhost',
         'PORT': '5433',
+        'CONN_MAX_AGE': 600,
+        'OPTIONS': {
+            'sslmode': 'prefer'
+        },
     }
 }
 
@@ -142,7 +146,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Custom user model
 AUTH_USER_MODEL = 'accounts.User'
 
-# Internationalization settings remain the same
+# Internationalization
 LANGUAGE_CODE = 'en'
 TIME_ZONE = 'UTC'
 USE_I18N = True
@@ -162,7 +166,7 @@ LOCALE_PATHS = [
     os.path.join(BASE_DIR, 'locale'),
 ]
 
-# Static files and Media settings remain the same
+# Static files and Media
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static_collected')
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
@@ -230,7 +234,6 @@ ACCOUNT_LOGIN_METHODS = {'email'}
 LOGIN_URL = '/api/v1/auth/login/'
 LOGIN_REDIRECT_URL = '/'
 
-
 # Social account settings
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
@@ -251,7 +254,7 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
 }
 
-# Other settings remain the same
+# Leaflet configuration
 LEAFLET_CONFIG = {
     'DEFAULT_CENTER': (0, 0),
     'DEFAULT_ZOOM': 2,
@@ -265,10 +268,11 @@ CACHES = {
         "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": "redis://127.0.0.1:6379/1",
         "OPTIONS": {
+        "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
     }
-}
+}}
 
 # Celery configuration
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
@@ -278,6 +282,28 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 
+CELERY_BEAT_SCHEDULE = {
+    'update-expired-deals': {
+        'task': 'apps.deals.tasks.update_expired_deals',
+        'schedule': timedelta(hours=1),
+    },
+    'warm-deal-caches': {
+        'task': 'apps.deals.tasks.warm_deal_caches',
+        'schedule': timedelta(hours=3),
+    },
+    'update-deal-statistics': {
+        'task': 'apps.deals.tasks.update_deal_statistics',
+        'schedule': timedelta(days=1),
+    },
+    'clean-outdated-deals': {
+        'task': 'apps.deals.tasks.clean_outdated_deals',
+        'schedule': timedelta(weeks=2),
+        'kwargs': {'days': 90},
+    },
+}
+
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@dealopia.com')
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')
 
 # Unfold Admin settings remain the same
 UNFOLD = {

@@ -2,6 +2,10 @@ from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.contrib.auth.base_user import BaseUserManager
 from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
+import secrets
+from django.core.mail import send_mail
+from django.conf import settings
 
 
 LANGUAGE_CHOICES = [
@@ -62,6 +66,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     location = models.ForeignKey('locations.Location', on_delete=models.SET_NULL, null=True, blank=True)
     favorite_categories = models.ManyToManyField('categories.Category', blank=True)
     notification_preferences = models.JSONField(default=dict)
+    
+    # Email change management fields
+    email_change_token = models.CharField(max_length=64, blank=True, null=True)
+    new_email = models.EmailField(blank=True, null=True)
+    email_token_created_at = models.DateTimeField(null=True, blank=True)
         
     objects = UserManager()
         
@@ -83,3 +92,104 @@ class User(AbstractBaseUser, PermissionsMixin):
     def get_short_name(self):
         """Return the short name for the user."""
         return self.first_name
+    
+    def create_email_change_request(self, new_email):
+        """
+        Generate token and store pending email change request
+        Returns the token which will be included in the email
+        """
+        # Generate a secure random token
+        token = secrets.token_urlsafe(43)  # Creates a ~64 character token
+        
+        # Store the token and new email
+        self.email_change_token = token
+        self.new_email = new_email
+        self.email_token_created_at = timezone.now()
+        self.save(update_fields=['email_change_token', 'new_email', 'email_token_created_at'])
+        
+        # Send verification email with API verification endpoint
+        verification_url = f"{settings.FRONTEND_URL}/email-verification?token={token}"
+        
+        subject = "[Dealopia] Verify your new email address"
+        message = f"""
+Hello {self.get_full_name() or self.email},
+
+We received a request to change your email address on Dealopia from {self.email} to {new_email}.
+
+To complete this change, please verify your new email address by clicking the link below:
+{verification_url}
+
+This link will expire in 24 hours.
+
+If you didn't request this change, please ignore this email or contact our support team.
+
+Best regards,
+The Dealopia Team
+        """
+        
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[new_email],
+            fail_silently=False,
+        )
+        
+        return token
+    
+    def confirm_email_change(self, token):
+        """
+        Confirm and process email change with token
+        This will be called from API endpoint
+        """
+        # Check if token exists and matches
+        if not self.email_change_token or self.email_change_token != token:
+            raise ValueError(_("Invalid verification token"))
+        
+        # Check if new email exists
+        if not self.new_email:
+            raise ValueError(_("No pending email change found"))
+        
+        # Check token expiry (24 hours)
+        if not self.email_token_created_at or \
+           (timezone.now() - self.email_token_created_at).total_seconds() > 86400:
+            raise ValueError(_("Verification token has expired"))
+        
+        # Store old email for notification
+        old_email = self.email
+        
+        # Update the email
+        self.email = self.new_email
+        
+        # Clear the change request data
+        self.new_email = None
+        self.email_change_token = None
+        self.email_token_created_at = None
+        
+        # Save changes
+        self.save(update_fields=['email', 'new_email', 'email_change_token', 'email_token_created_at'])
+        
+        # Notify old email about the change
+        subject = "[Dealopia] Your email address has been changed"
+        message = f"""
+Hello {self.get_full_name() or old_email},
+
+This is to inform you that the email address associated with your Dealopia account has been changed from {old_email} to {self.email}.
+
+If you made this change, no further action is required.
+
+If you did not authorize this change, please contact our support team immediately.
+
+Best regards,
+The Dealopia Team
+        """
+        
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[old_email],
+            fail_silently=False,
+        )
+        
+        return True

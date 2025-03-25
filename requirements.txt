@@ -88,3 +88,5 @@ django-pgfields
 
 
 
+pyotp
+qrcode

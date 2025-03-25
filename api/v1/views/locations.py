@@ -15,20 +15,25 @@ class LocationViewSet(viewsets.ModelViewSet):
     @action(detail=False)
     def nearby(self, request):
         """Find locations near a specific point"""
-        latitude = request.query_params.get('lat')
-        longitude = request.query_params.get('lng')
-        radius = request.query_params.get('radius', 10)  # Default radius 10km
-        
-        if not latitude or not longitude:
-            return Response({"error": "Latitude and longitude parameters are required"}, status=400)
-        
         try:
-            point = Point(float(longitude), float(latitude), srid=4326)
-            locations = Location.objects.annotate(
-                distance=Distance('point', point)
-            ).filter(distance__lte=radius * 1000).order_by('distance')
-            
-            serializer = self.get_serializer(locations, many=True)
-            return Response(serializer.data)
-        except ValueError:
-            return Response({"error": "Invalid coordinates"}, status=400)
+            latitude = request.query_params.get('lat')
+            longitude = request.query_params.get('lng')
+            radius = float(request.query_params.get('radius', 10))
+           
+            if not latitude or not longitude:
+                return Response({"error": "Latitude and longitude parameters are required"}, status=400)
+           
+            try:
+                point = Point(float(longitude), float(latitude), srid=4326)
+                radius = max(0.1, radius)
+                
+                locations = Location.objects.annotate(
+                    distance=Distance('point', point)
+                ).filter(distance__lte=radius * 1000).order_by('distance')
+               
+                serializer = self.get_serializer(locations, many=True)
+                return Response(serializer.data)
+            except ValueError:
+                return Response({"error": "Invalid coordinates or radius value"}, status=400)
+        except Exception as e:
+            return Response({"error": f"Could not process location request: {str(e)}"}, status=400)

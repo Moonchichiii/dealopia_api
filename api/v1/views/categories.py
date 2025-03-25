@@ -7,6 +7,7 @@ from api.v1.serializers.categories import CategorySerializer
 from api.v1.serializers.deals import DealSerializer
 from api.permissions import IsAdminOrReadOnly
 
+
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
@@ -17,9 +18,30 @@ class CategoryViewSet(viewsets.ModelViewSet):
     ordering_fields = ['order', 'name']
     ordering = ['order']
     
+    def get_queryset(self):
+        """Optimize category queries with prefetch_related for children"""
+        return super().get_queryset().prefetch_related('children')
+    
     @action(detail=True)
     def deals(self, request, pk=None):
-        category = self.get_object()
-        deals = category.deals.all()
+        """Get deals for this category using optimized service method"""
+        from apps.deals.services import DealService
+        
+        category_id = self.kwargs['pk']
+        limit = int(request.query_params.get('limit', 12))
+        
+        deals = DealService.get_deals_by_category(category_id, limit)
+        
         serializer = DealSerializer(deals, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=False)
+    def featured(self, request):
+        """Get featured categories with active deals"""
+        from apps.categories.services import CategoryService
+        
+        limit = int(request.query_params.get('limit', 6))
+        categories = CategoryService.get_popular_categories(limit)
+        
+        serializer = self.get_serializer(categories, many=True)
         return Response(serializer.data)
