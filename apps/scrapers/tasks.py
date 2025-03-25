@@ -1,9 +1,22 @@
 from celery import shared_task
-from playwright.sync_api import sync_playwright
 from deals.models import Deal
+from playwright.sync_api import sync_playwright
 
-@shared_task
-def scrape_modern_shop(url):
+
+@shared_task(bind=True, max_retries=3)
+def scrape_modern_shop(self, url):
+    """
+    Scrape deal information from a modern shop website.
+    
+    Creates Deal objects from scraped data including title, price, image URL,
+    and geographic coordinates.
+    
+    Args:
+        url (str): The website URL to scrape
+        
+    Returns:
+        int: Number of deals scraped
+    """
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page()
@@ -22,17 +35,20 @@ def scrape_modern_shop(url):
                     }))
             }''')
             
-            for deal in deals:
-                Deal.objects.create(
+            # Use bulk_create for better performance
+            Deal.objects.bulk_create([
+                Deal(
                     title=deal['title'],
                     current_price=deal['price'],
                     image_url=deal['image'],
                     location=f"POINT({deal['coordinates']})"
-                )
+                ) for deal in deals
+            ])
             
-            browser.close()
             return len(deals)
         
         except Exception as e:
+            # Proper retry with bound task
+            self.retry(exc=e, countdown=60)
+        finally:
             browser.close()
-            raise self.retry(exc=e, countdown=60)

@@ -1,25 +1,22 @@
-# api/v1/urls.py - Enhanced URL configuration
-from django.urls import path, include, re_path
+from django.urls import include, path, re_path
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenVerifyView
 
-# Import views
 from api.v1.views.accounts import UserViewSet
-from api.v1.views.deals import DealViewSet
-from api.v1.views.shops import ShopViewSet
-from api.v1.views.categories import CategoryViewSet
-from api.v1.views.locations import LocationViewSet
 from api.v1.views.auth import (
     CustomTokenObtainPairView,
-    TwoFactorVerifyView,
-    TwoFactorSetupView,
-    TwoFactorDisableView,
-    SocialAuthCallbackView,
     SessionInfoView,
-    TokenRefreshRateLimitedView
+    SocialAuthCallbackView,
+    TokenRefreshRateLimitedView,
+    TwoFactorDisableView,
+    TwoFactorSetupView,
+    TwoFactorVerifyView,
 )
+from api.v1.views.categories import CategoryViewSet
+from api.v1.views.deals import DealViewSet
+from api.v1.views.locations import LocationViewSet
+from api.v1.views.shops import ShopViewSet
 
-# Setup router
 router = DefaultRouter()
 router.register(r'users', UserViewSet)
 router.register(r'deals', DealViewSet)
@@ -27,16 +24,12 @@ router.register(r'shops', ShopViewSet)
 router.register(r'categories', CategoryViewSet)
 router.register(r'locations', LocationViewSet)
 
-# Authentication URLs with enhanced flexibility
 auth_patterns = [
-    # Standard auth endpoints
     path('login/', CustomTokenObtainPairView.as_view(), name='login'),
     path('logout/', include('dj_rest_auth.urls')),
     
     # Registration endpoints
     path('registration/', include('dj_rest_auth.registration.urls')),
-    
-    # Email confirmation and verification
     re_path(
         r"^registration/account-confirm-email/(?P<key>[-:\w]+)/",
         include("allauth.urls"),
@@ -65,16 +58,13 @@ auth_patterns = [
     path('2fa/setup/', TwoFactorSetupView.as_view(), name='2fa_setup'),
     path('2fa/disable/', TwoFactorDisableView.as_view(), name='2fa_disable'),
     
-    # Session info and user profile
+    # User profile
     path('me/', UserViewSet.as_view({'get': 'me'}), name='auth_me'),
     path('session-info/', SessionInfoView.as_view(), name='session_info'),
 ]
 
 urlpatterns = [
-    # Include router URLs
     path('', include(router.urls)),
-    
-    # Auth endpoints under /auth/
     path('auth/', include(auth_patterns)),
     
     # Custom deal endpoints

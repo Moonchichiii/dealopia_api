@@ -1,38 +1,37 @@
 # Backend Requirements for Dealopia API
 
-# Core Django
+# Core Django Framework & REST API
 Django
 djangorestframework
 djangorestframework-simplejwt
+django-filter
+django-cors-headers
+drf-spectacular
 django-otp
 
-# Admin & CMS
+# Admin Interface
 wagtail
 django-unfold
 
 # Database
 psycopg2-binary
 dj-database-url
+django-pgfields
 
-# GIS Support
+# Geospatial Support
 GDAL
 django-leaflet
 
-# Cache & Task Queue
+# Caching & Task Processing
 redis
-celery
 django-redis
+celery
 kombu
 
 # Authentication & Social Auth
 django-allauth
 django-oauth-toolkit
 social-auth-app-django
-
-# API Enhancements
-drf-spectacular
-django-filter
-django-cors-headers
 
 # Storage & Media
 django-storages
@@ -45,7 +44,7 @@ django-rosetta
 django-parler
 django-modeltranslation
 
-# Performance & Monitoring
+# Performance Monitoring
 django-prometheus
 django-debug-toolbar
 scout-apm
@@ -76,17 +75,11 @@ locust
 
 # Utilities
 python-dateutil
-python-dotenv
 python-decouple
 django-extensions
 django-lifecycle
 rich
 
-
-psycopg2-binary
-django-pgfields
-
-
-
+# Two-Factor Authentication
 pyotp
 qrcode

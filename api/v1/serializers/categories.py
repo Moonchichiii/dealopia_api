@@ -1,17 +1,14 @@
 from rest_framework import serializers
+
 from apps.categories.models import Category
 
 
 class CategoryListSerializer(serializers.ModelSerializer):
-    """
-    Simplified serializer for Category model when used in listings.
-    This prevents recursion issues when categories are nested in other objects.
-    """
+    """Simplified serializer for Category model when used in listings."""
+    
     class Meta:
         model = Category
-        fields = [
-            'id', 'name', 'icon', 'image', 'is_active'
-        ]
+        fields = ['id', 'name', 'icon', 'image', 'is_active']
 
 
 class CategorySerializer(serializers.ModelSerializer):

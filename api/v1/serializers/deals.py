@@ -1,10 +1,9 @@
-# api/v1/serializers/deals.py
-from rest_framework import serializers
 from django.utils import timezone
+from rest_framework import serializers
 
-from apps.deals.models import Deal
-from api.v1.serializers.shops import ShopListSerializer
 from api.v1.serializers.categories import CategoryListSerializer
+from api.v1.serializers.shops import ShopListSerializer
+from apps.deals.models import Deal
 
 
 class DealListSerializer(serializers.ModelSerializer):
@@ -28,9 +27,7 @@ class DealListSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'time_left', 'is_new']
     
     def get_shop_logo(self, obj):
-        if obj.shop.logo:
-            return obj.shop.logo.url
-        return None
+        return obj.shop.logo.url if obj.shop.logo else None
         
     def get_discount_amount(self, obj):
         """Calculate the discount amount in currency"""
@@ -40,31 +37,29 @@ class DealListSerializer(serializers.ModelSerializer):
     
     def get_time_left(self, obj):
         """Return the time left until the deal expires"""
-        if obj.end_date:
-            now = timezone.now()
-            if now > obj.end_date:
-                return "Expired"
-                
-            time_left = obj.end_date - now
-            days = time_left.days
+        if not obj.end_date:
+            return None
             
-            if days > 0:
-                return f"{days} days"
+        now = timezone.now()
+        if now > obj.end_date:
+            return "Expired"
             
-            hours = time_left.seconds // 3600
-            if hours > 0:
-                return f"{hours} hours"
-                
-            minutes = (time_left.seconds % 3600) // 60
-            return f"{minutes} minutes"
+        time_left = obj.end_date - now
+        days = time_left.days
         
-        return None
+        if days > 0:
+            return f"{days} days"
+        
+        hours = time_left.seconds // 3600
+        if hours > 0:
+            return f"{hours} hours"
+            
+        minutes = (time_left.seconds % 3600) // 60
+        return f"{minutes} minutes"
     
     def get_is_new(self, obj):
         """Check if the deal is new (less than 3 days old)"""
-        if obj.created_at:
-            return (timezone.now() - obj.created_at).days < 3
-        return False
+        return (timezone.now() - obj.created_at).days < 3 if obj.created_at else False
 
 
 class DealSerializer(DealListSerializer):
@@ -86,15 +81,17 @@ class DealSerializer(DealListSerializer):
                     "End date must be after start date"
                 )
             
-            # Ensure the deal doesn't end in the past
             if data['end_date'] < timezone.now():
                 raise serializers.ValidationError(
                     "End date cannot be in the past"
                 )
         
         # Calculate discount_percentage if not provided
-        if 'original_price' in data and 'discounted_price' in data and 'discount_percentage' not in data:
-            discount = ((data['original_price'] - data['discounted_price']) / data['original_price']) * 100
+        if ('original_price' in data and 
+            'discounted_price' in data and 
+            'discount_percentage' not in data):
+            discount = ((data['original_price'] - data['discounted_price']) / 
+                       data['original_price']) * 100
             data['discount_percentage'] = round(discount)
         
         return data

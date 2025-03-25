@@ -1,24 +1,20 @@
-from .base import *
+from .base import *  # noqa: F403
 
+# Core settings
 DEBUG = True
 
-# Add debug toolbar
-INSTALLED_APPS += [
-    'debug_toolbar',
-]
+# Debug toolbar configuration
+INSTALLED_APPS += ['debug_toolbar']  # noqa: F405
+MIDDLEWARE = ['debug_toolbar.middleware.DebugToolbarMiddleware'] + MIDDLEWARE  # noqa: F405
+INTERNAL_IPS = ['127.0.0.1']
 
-MIDDLEWARE = ['debug_toolbar.middleware.DebugToolbarMiddleware'] + MIDDLEWARE
+# Authentication settings
+REST_AUTH['JWT_AUTH_COOKIE_DOMAIN'] = 'localhost'  # noqa: F405
 
-INTERNAL_IPS = [
-    '127.0.0.1',
-]
-
-# Rest Auth
-REST_AUTH['JWT_AUTH_COOKIE_DOMAIN'] = 'localhost'
-# Email backend for development
+# Email configuration
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-# Disable caching during development
+# Disable caching
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
@@ -29,21 +25,9 @@ CACHES = {
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = [
-    'DELETE',
-    'GET',
-    'OPTIONS',
-    'PATCH',
-    'POST',
-    'PUT',
+    'DELETE', 'GET', 'OPTIONS', 'PATCH', 'POST', 'PUT',
 ]
 CORS_ALLOW_HEADERS = [
-    'accept',
-    'accept-encoding',
-    'authorization',
-    'content-type',
-    'dnt',
-    'origin',
-    'user-agent',
-    'x-csrftoken',
-    'x-requested-with',
+    'accept', 'accept-encoding', 'authorization', 'content-type',
+    'dnt', 'origin', 'user-agent', 'x-csrftoken', 'x-requested-with',
 ]

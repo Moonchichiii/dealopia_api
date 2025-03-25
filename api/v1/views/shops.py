@@ -1,12 +1,17 @@
-from rest_framework import viewsets, filters
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django_filters.rest_framework import DjangoFilterBackend
-from apps.shops.models import Shop
-from api.v1.serializers.shops import ShopSerializer
+
 from api.v1.serializers.deals import DealSerializer
+from api.v1.serializers.shops import ShopSerializer
+from apps.shops.models import Shop
+
 
 class ShopViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for Shop model providing CRUD operations and additional endpoints.
+    """
     queryset = Shop.objects.all()
     serializer_class = ShopSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -24,6 +29,6 @@ class ShopViewSet(viewsets.ModelViewSet):
     @action(detail=True)
     def deals(self, request, pk=None):
         shop = self.get_object()
-        deals = shop.deals.all()
+        deals = shop.deals.all().select_related('shop').prefetch_related('categories')
         serializer = DealSerializer(deals, many=True)
         return Response(serializer.data)

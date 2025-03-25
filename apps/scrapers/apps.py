@@ -6,4 +6,4 @@ class ScrapersConfig(AppConfig):
     verbose_name = 'Web Scrapers'
     
     def ready(self):
-        import apps.scrapers.signals
+        pass

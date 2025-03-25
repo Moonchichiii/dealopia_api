@@ -1,11 +1,11 @@
-from django.db import models
-from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
-from django.contrib.auth.base_user import BaseUserManager
-from django.utils.translation import gettext_lazy as _
-from django.utils import timezone
-import secrets
-from django.core.mail import send_mail
 from django.conf import settings
+from django.contrib.auth.base_user import BaseUserManager
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
+from django.core.mail import send_mail
+from django.db import models
+from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
+import secrets
 
 
 LANGUAGE_CHOICES = [
@@ -59,31 +59,32 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(auto_now_add=True)
-        
+    
     phone_number = models.CharField(max_length=15, blank=True)
     avatar = models.ImageField(upload_to='avatars/', blank=True)
     preferred_language = models.CharField(max_length=10, choices=LANGUAGE_CHOICES, default='en')
     location = models.ForeignKey('locations.Location', on_delete=models.SET_NULL, null=True, blank=True)
     favorite_categories = models.ManyToManyField('categories.Category', blank=True)
     notification_preferences = models.JSONField(default=dict)
+    sustainability_preference = models.IntegerField(default=5)
     
     # Email change management fields
     email_change_token = models.CharField(max_length=64, blank=True, null=True)
     new_email = models.EmailField(blank=True, null=True)
     email_token_created_at = models.DateTimeField(null=True, blank=True)
-        
+    
     objects = UserManager()
-        
+    
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
-        
+    
     class Meta:
         verbose_name = 'User'
         verbose_name_plural = 'Users'
-            
+    
     def __str__(self):
         return self.email
-        
+    
     def get_full_name(self):
         """Return the first_name plus the last_name, with a space in between."""
         full_name = f"{self.first_name} {self.last_name}"
@@ -94,20 +95,14 @@ class User(AbstractBaseUser, PermissionsMixin):
         return self.first_name
     
     def create_email_change_request(self, new_email):
-        """
-        Generate token and store pending email change request
-        Returns the token which will be included in the email
-        """
-        # Generate a secure random token
-        token = secrets.token_urlsafe(43)  # Creates a ~64 character token
+        """Generate token and store pending email change request."""
+        token = secrets.token_urlsafe(43)
         
-        # Store the token and new email
         self.email_change_token = token
         self.new_email = new_email
         self.email_token_created_at = timezone.now()
         self.save(update_fields=['email_change_token', 'new_email', 'email_token_created_at'])
         
-        # Send verification email with API verification endpoint
         verification_url = f"{settings.FRONTEND_URL}/email-verification?token={token}"
         
         subject = "[Dealopia] Verify your new email address"
@@ -138,38 +133,26 @@ The Dealopia Team
         return token
     
     def confirm_email_change(self, token):
-        """
-        Confirm and process email change with token
-        This will be called from API endpoint
-        """
-        # Check if token exists and matches
+        """Confirm and process email change with token."""
         if not self.email_change_token or self.email_change_token != token:
             raise ValueError(_("Invalid verification token"))
         
-        # Check if new email exists
         if not self.new_email:
             raise ValueError(_("No pending email change found"))
         
-        # Check token expiry (24 hours)
         if not self.email_token_created_at or \
            (timezone.now() - self.email_token_created_at).total_seconds() > 86400:
             raise ValueError(_("Verification token has expired"))
         
-        # Store old email for notification
         old_email = self.email
-        
-        # Update the email
         self.email = self.new_email
         
-        # Clear the change request data
         self.new_email = None
         self.email_change_token = None
         self.email_token_created_at = None
         
-        # Save changes
         self.save(update_fields=['email', 'new_email', 'email_change_token', 'email_token_created_at'])
         
-        # Notify old email about the change
         subject = "[Dealopia] Your email address has been changed"
         message = f"""
 Hello {self.get_full_name() or old_email},

@@ -1,11 +1,12 @@
-from rest_framework import viewsets, filters, permissions
+from rest_framework import filters, permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django_filters.rest_framework import DjangoFilterBackend
+
 from apps.categories.models import Category
+from api.permissions import IsAdminOrReadOnly
 from api.v1.serializers.categories import CategorySerializer
 from api.v1.serializers.deals import DealSerializer
-from api.permissions import IsAdminOrReadOnly
+from django_filters.rest_framework import DjangoFilterBackend
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -19,18 +20,15 @@ class CategoryViewSet(viewsets.ModelViewSet):
     ordering = ['order']
     
     def get_queryset(self):
-        """Optimize category queries with prefetch_related for children"""
         return super().get_queryset().prefetch_related('children')
     
     @action(detail=True)
     def deals(self, request, pk=None):
-        """Get deals for this category using optimized service method"""
+        """Get deals for this category"""
         from apps.deals.services import DealService
         
-        category_id = self.kwargs['pk']
         limit = int(request.query_params.get('limit', 12))
-        
-        deals = DealService.get_deals_by_category(category_id, limit)
+        deals = DealService.get_deals_by_category(pk, limit)
         
         serializer = DealSerializer(deals, many=True)
         return Response(serializer.data)

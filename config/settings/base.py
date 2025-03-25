@@ -83,7 +83,6 @@ MIDDLEWARE = [
     'allauth.account.middleware.AccountMiddleware',
 ]
 
-# Site ID for django-allauth
 SITE_ID = 1
 
 ROOT_URLCONF = 'config.urls'
@@ -106,7 +105,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# Database configuration
 DATABASES = {
     'default': {
         'ENGINE': 'django.contrib.gis.db.backends.postgis',
@@ -127,7 +125,6 @@ SPATIALITE_LIBRARY_PATH = 'mod_spatialite'
 GDAL_LIBRARY_PATH = 'C:/OSGeo4W/bin/gdal310.dll'
 GEOS_LIBRARY_PATH = 'C:/OSGeo4W/bin/geos_c.dll'
 
-# Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -143,10 +140,8 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# Custom user model
 AUTH_USER_MODEL = 'accounts.User'
 
-# Internationalization
 LANGUAGE_CODE = 'en'
 TIME_ZONE = 'UTC'
 USE_I18N = True
@@ -166,7 +161,6 @@ LOCALE_PATHS = [
     os.path.join(BASE_DIR, 'locale'),
 ]
 
-# Static files and Media
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static_collected')
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
@@ -194,7 +188,6 @@ SIMPLE_JWT = {
     'USER_ID_CLAIM': 'user_id',
 }
 
-# REST Framework settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -211,7 +204,6 @@ REST_FRAMEWORK = {
     ),
 }
 
-# dj-rest-auth settings
 REST_AUTH = {
     'USE_JWT': True,
     'JWT_AUTH_COOKIE': 'auth-token',
@@ -220,7 +212,6 @@ REST_AUTH = {
     'TOKEN_MODEL': None,
 }
 
-# Django allauth settings
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_USERNAME_REQUIRED = False
@@ -230,11 +221,9 @@ ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
 ACCOUNT_EMAIL_SUBJECT_PREFIX = '[Dealopia] '
 ACCOUNT_LOGIN_METHODS = {'email'}
 
-# Authentication URLs
 LOGIN_URL = '/api/v1/auth/login/'
 LOGIN_REDIRECT_URL = '/'
 
-# Social account settings
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'SCOPE': [
@@ -247,14 +236,12 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 
-# DRF Spectacular settings
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Dealopia API',
     'DESCRIPTION': 'API for Dealopia deals and offers platform',
     'VERSION': '1.0.0',
 }
 
-# Leaflet configuration
 LEAFLET_CONFIG = {
     'DEFAULT_CENTER': (0, 0),
     'DEFAULT_ZOOM': 2,
@@ -262,7 +249,6 @@ LEAFLET_CONFIG = {
     'MAX_ZOOM': 18,
 }
 
-# Cache configuration
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
@@ -274,7 +260,6 @@ CACHES = {
     }
 }}
 
-# Celery configuration
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
 CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 CELERY_ACCEPT_CONTENT = ['json']
@@ -305,14 +290,12 @@ CELERY_BEAT_SCHEDULE = {
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@dealopia.com')
 FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')
 
-# Unfold Admin settings remain the same
 UNFOLD = {
     "SITE_TITLE": "Dealopia Admin",
     "SITE_HEADER": "Dealopia",
     "SITE_URL": "/",
     "SITE_ICON": None,
     
-    # Sidebar menu customization
     "SIDEBAR": {
         "show_search": True,
         "show_all_applications": True,
@@ -323,7 +306,7 @@ UNFOLD = {
                 "models": [
                     "accounts.user",
                 ],
-                "items": []  # Add this empty items list
+                "items": []
             },
             {
                 "title": "Deals",
@@ -331,7 +314,7 @@ UNFOLD = {
                 "models": [
                     "deals.deal",
                 ],
-                "items": []  # Add this empty items list
+                "items": []
             },
             {
                 "title": "Shops",
@@ -339,7 +322,7 @@ UNFOLD = {
                 "models": [
                     "shops.shop",
                 ],
-                "items": []  # Add this empty items list
+                "items": []
             },
             {
                 "title": "Categories",
@@ -347,7 +330,7 @@ UNFOLD = {
                 "models": [
                     "categories.category",
                 ],
-                "items": []  # Add this empty items list
+                "items": []
             },
             {
                 "title": "Locations",
@@ -355,12 +338,11 @@ UNFOLD = {
                 "models": [
                     "locations.location",
                 ],
-                "items": []  # Add this empty items list
+                "items": []
             },
         ]
     },
     
-    # Theme configuration
     "COLORS": {
         "primary": {
             "50": "240 249 255",
@@ -374,7 +356,141 @@ UNFOLD = {
         },
     },
     
-    # Environment indicator
     "ENVIRONMENT": "development",
     "ENVIRONMENT_COLOR": "#FFC107",
 }
+
+LOGS_DIR = os.path.join(BASE_DIR, 'logs')
+os.makedirs(LOGS_DIR, exist_ok=True)
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+        'json': {
+            '()': 'pythonjsonlogger.jsonlogger.JsonFormatter',
+            'format': '%(asctime)s %(name)s %(levelname)s %(message)s %(pathname)s %(lineno)s',
+        },
+    },
+    'filters': {
+        'require_debug_true': {
+            '()': 'django.utils.log.RequireDebugTrue',
+        },
+        'require_debug_false': {
+            '()': 'django.utils.log.RequireDebugFalse',
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(LOGS_DIR, 'dealopia.log'),
+            'maxBytes': 10 * 1024 * 1024,
+            'backupCount': 10,
+            'formatter': 'verbose',
+        },
+        'error_file': {
+            'level': 'ERROR',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(LOGS_DIR, 'error.log'),
+            'maxBytes': 10 * 1024 * 1024,
+            'backupCount': 10,
+            'formatter': 'json',
+        },
+        'performance_file': {
+            'level': 'WARNING',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(LOGS_DIR, 'performance.log'),
+            'maxBytes': 10 * 1024 * 1024,
+            'backupCount': 5,
+            'formatter': 'json',
+        },
+        'security_file': {
+            'level': 'WARNING',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(LOGS_DIR, 'security.log'),
+            'maxBytes': 10 * 1024 * 1024,
+            'backupCount': 5,
+            'formatter': 'json',
+        },
+        'mail_admins': {
+            'level': 'ERROR',
+            'class': 'django.utils.log.AdminEmailHandler',
+            'filters': ['require_debug_false'],
+            'formatter': 'verbose',
+            'include_html': True,
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file', 'mail_admins'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'django.server': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['console', 'error_file', 'mail_admins'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.db.backends': {
+            'handlers': ['console', 'error_file'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.security': {
+            'handlers': ['console', 'security_file', 'mail_admins'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'dealopia': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'dealopia.performance': {
+            'handlers': ['console', 'performance_file'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        'dealopia.errors': {
+            'handlers': ['console', 'error_file', 'mail_admins'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'dealopia.scrapers': {
+            'handlers': ['console', 'file', 'error_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'dealopia.api_integration': {
+            'handlers': ['console', 'file', 'error_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'dealopia.security': {
+            'handlers': ['console', 'security_file', 'mail_admins'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
+
+SLOW_REQUEST_THRESHOLD = 1.0

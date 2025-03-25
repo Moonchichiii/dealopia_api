@@ -1,108 +1,77 @@
 from celery import shared_task
+from django.db.models.signals import post_delete, post_save
+from django.dispatch import receiver
 from django.utils import timezone
-from django.db.models import Count
-from .models import Deal
-from apps.categories.models import Category
+import requests
 
-
-@shared_task
-def update_expired_deals():
-    """Mark deals as expired if end_date has passed"""
-    now = timezone.now()
-    expired_count = Deal.objects.filter(
-        end_date__lt=now, 
-        is_verified=True
-    ).update(is_verified=False)
-    
-    # If any deals were expired, we should warm the caches
-    if expired_count > 0:
-        warm_deal_caches.delay()
-        
-    return f"Marked {expired_count} deals as expired"
+from apps.deals.models import Deal
+from apps.scrapers.services import ScraperService
+from apps.shops.models import Shop
+from core.utils.cache import invalidate_cache_prefix
 
 
 @shared_task
 def send_deal_notifications(deal_id):
-    """Send notifications for a new deal"""
-    from apps.accounts.models import User
-    from django.core.mail import send_mail
-    
-    try:
-        deal = Deal.objects.get(id=deal_id)
-        users = User.objects.filter(favorite_categories__in=deal.categories.all()).distinct()
-        
-        for user in users:
-            # This would be replaced with a proper notification system
-            print(f"Sending notification to {user.email} about deal: {deal.title}")
-            
-        return f"Notifications sent to {users.count()} users"
-    except Deal.DoesNotExist:
-        return "Deal not found"
+    pass
 
 
 @shared_task
-def warm_deal_caches():
-    """Pre-warm commonly accessed deal caches"""
-    from apps.deals.services import DealService
+def update_sustainability_data():
+    """Regularly fetch sustainability data from external sources"""
+    # Update eco certifications
+    scraper_service = ScraperService()
+    scraper_service.fetch_eco_certifications()
     
-    # Warm the most frequently accessed caches
-    DealService.get_featured_deals()
-    DealService.get_expiring_soon_deals()
-    DealService.get_new_deals()
-    DealService.get_popular_deals()
+    # Update carbon neutrality status for shops
+    carbon_data = requests.get('https://carbon-api.example.com/businesses')
+    for business in carbon_data.json()['businesses']:
+        try:
+            shop = Shop.objects.get(external_id=business['id'])
+            shop.carbon_neutral = business['carbon_neutral']
+            shop.save(update_fields=['carbon_neutral'])
+        except Shop.DoesNotExist:
+            continue
     
-    # Warm popular category deals
-    popular_categories = Category.objects.annotate(
-        deal_count=Count('deals', filter=models.Q(deals__is_verified=True))
-    ).filter(is_active=True).order_by('-deal_count')[:5]
-    
-    for category in popular_categories:
-        # Assuming you've added this method to your service
-        DealService.get_deals_by_category(category.id)
-        
-    return "Deal caches warmed successfully"
+    # Update deals' sustainability scores
+    Deal.objects.filter(is_active=True).select_related().iterator(chunk_size=100)
+    for deal in Deal.objects.filter(is_active=True):
+        deal.calculate_sustainability_score()
 
 
-@shared_task
-def update_deal_statistics():
-    """Update aggregated deal statistics"""
-    from django.db.models import Avg, Sum
-    from django.core.cache import cache
+@receiver(post_save, sender=Deal)
+def handle_deal_post_save(sender, instance, created, **kwargs):
+    """Signal handler for Deal post_save"""
+    if created and instance.is_verified:
+        send_deal_notifications.delay(instance.id)
     
-    # Calculate average discount percentage
-    avg_discount = Deal.objects.filter(
-        is_verified=True
-    ).aggregate(
-        avg_discount=Avg('discount_percentage')
-    )['avg_discount'] or 0
-    
-    # Calculate total savings (original - discounted)
-    total_savings = Deal.objects.filter(
-        is_verified=True
-    ).aggregate(
-        total=Sum(models.F('original_price') - models.F('discounted_price'))
-    )['total'] or 0
-    
-    # Store metrics in cache
-    cache.set('stats:avg_discount', avg_discount, 86400)  # 24 hours
-    cache.set('stats:total_savings', total_savings, 86400)  # 24 hours
-    
-    return "Updated deal statistics"
+    invalidate_deal_caches(instance)
 
 
-@shared_task
-def clean_outdated_deals(days=90):
-    """
-    Mark very old expired deals as inactive to keep the active dataset smaller
-    This helps maintain database performance
-    """
-    threshold = timezone.now() - timezone.timedelta(days=days)
+@receiver(post_delete, sender=Deal)
+def handle_deal_post_delete(sender, instance, **kwargs):
+    """Signal handler for Deal post_delete"""
+    invalidate_deal_caches(instance)
+
+
+def invalidate_deal_caches(deal):
+    """Invalidate all caches related to a specific deal"""
+    invalidate_cache_prefix("featured_deals")
     
-    count = Deal.objects.filter(
-        end_date__lt=threshold,
-        is_verified=True
-    ).update(
-        is_verified=False
-    )
+    # Category-specific caches
+    categories = deal.categories.values_list('id', flat=True)
+    for category_id in categories:
+        invalidate_cache_prefix(f"category:{category_id}")
     
-    return f"Cleaned {count} outdated deals"
+    now = timezone.now()
+    
+    # Expiring deals cache
+    if deal.end_date and deal.end_date <= now + timezone.timedelta(days=3):
+        invalidate_cache_prefix("expiring_deals")
+    
+    # New deals cache
+    if deal.created_at >= now - timezone.timedelta(days=7):
+        invalidate_cache_prefix("new_deals")
+    
+    invalidate_cache_prefix("related_deals")
+    invalidate_cache_prefix("popular_deals")
+    invalidate_cache_prefix(f"shop:{deal.shop_id}")

@@ -1,52 +1,43 @@
-# api/v1/views/auth.py - Enhanced authentication views
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status, permissions
-from django_otp.plugins.otp_totp.models import TOTPDevice
 from django.contrib.auth import get_user_model
+from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
+from django_otp.plugins.otp_totp.models import TOTPDevice
+from drf_spectacular.utils import extend_schema, OpenApiResponse
+from rest_framework import permissions, status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
-from django.utils.translation import gettext_lazy as _
-from django.utils import timezone
+import base64
+import io
 import pyotp
 import qrcode
-import io
-import base64
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
-from api.v1.serializers.accounts import UserSerializer
 
 User = get_user_model()
 
+
 class CustomTokenObtainPairView(TokenObtainPairView):
-    """
-    Enhanced token obtain view that handles 2FA requirements
-    """
+    @extend_schema(
+        description="Login with email and password, may require 2FA if enabled"
+    )
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         
-        try:
-            serializer.is_valid(raise_exception=True)
-        except TokenError as e:
-            raise InvalidToken(e.args[0])
-            
-        # Check if user has 2FA enabled
         user = User.objects.get(email=request.data.get('email'))
         if TOTPDevice.objects.filter(user=user, confirmed=True).exists():
-            # Return user_id instead of tokens if 2FA is required
             return Response({
                 'requires_2fa': True,
                 'user_id': str(user.id),
                 'message': _('Two-factor authentication required')
             })
             
-        # No 2FA required, return tokens
         return Response(serializer.validated_data)
 
+
 class TwoFactorVerifyView(APIView):
-    """
-    Verify a TOTP code for two-factor authentication
-    """
+    """Verify a TOTP code for two-factor authentication"""
     permission_classes = []
     
     @extend_schema(
@@ -86,7 +77,6 @@ class TwoFactorVerifyView(APIView):
                 user.last_login = timezone.now()
                 user.save(update_fields=['last_login'])
                 
-                # Generate JWT tokens
                 refresh = RefreshToken.for_user(user)
                 
                 return Response({
@@ -110,10 +100,9 @@ class TwoFactorVerifyView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+
 class TwoFactorSetupView(APIView):
-    """
-    Setup two-factor authentication for a user
-    """
+    """Setup two-factor authentication for a user"""
     permission_classes = [permissions.IsAuthenticated]
     
     @extend_schema(
@@ -126,14 +115,12 @@ class TwoFactorSetupView(APIView):
     def get(self, request, *args, **kwargs):
         user = request.user
         
-        # Check if user already has 2FA set up
         if TOTPDevice.objects.filter(user=user, confirmed=True).exists():
             return Response(
                 {'error': _('Two-factor authentication is already enabled')},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Generate a new TOTP device
         device, created = TOTPDevice.objects.get_or_create(
             user=user,
             confirmed=False,
@@ -141,15 +128,12 @@ class TwoFactorSetupView(APIView):
         )
         
         if not created:
-            # Regenerate key for existing unconfirmed device
             device.key = TOTPDevice.random_key()
             device.save()
         
-        # Format key as base32 for QR code
         key = device.bin_key
         totp = pyotp.TOTP(base64.b32encode(key).decode('utf-8'))
         
-        # Generate QR code
         provision_uri = totp.provisioning_uri(
             name=user.email,
             issuer_name="Dealopia"
@@ -197,7 +181,6 @@ class TwoFactorSetupView(APIView):
             device = TOTPDevice.objects.get(user=user, confirmed=False)
             
             if device.verify_token(token):
-                # Mark device as confirmed
                 device.confirmed = True
                 device.save()
                 
@@ -217,10 +200,9 @@ class TwoFactorSetupView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+
 class TwoFactorDisableView(APIView):
-    """
-    Disable two-factor authentication for a user
-    """
+    """Disable two-factor authentication for a user"""
     permission_classes = [permissions.IsAuthenticated]
     
     @extend_schema(
@@ -250,14 +232,12 @@ class TwoFactorDisableView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Verify password
         if not user.check_password(password):
             return Response(
                 {'error': _('Invalid password')},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Delete all TOTP devices for user
         devices = TOTPDevice.objects.filter(user=user)
         if not devices.exists():
             return Response(
@@ -272,20 +252,12 @@ class TwoFactorDisableView(APIView):
             'message': _('Two-factor authentication has been disabled successfully')
         })
 
+
 class SocialAuthCallbackView(APIView):
-    """
-    Handle social authentication callbacks and return JWT tokens
-    """
+    """Handle social authentication callbacks and return JWT tokens"""
     permission_classes = []
     
     def get(self, request, *args, **kwargs):
-        # This is a simplified example - in practice you would:
-        # 1. Get the auth code from the request
-        # 2. Exchange it for an access token with the provider
-        # 3. Get user info from the provider
-        # 4. Create or get the user in your database
-        
-        # For demo purposes, we'll assume we already have the user
         user = request.user
         
         if not user.is_authenticated:
@@ -294,18 +266,18 @@ class SocialAuthCallbackView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED
             )
             
-        # Generate JWT tokens
         refresh = RefreshToken.for_user(user)
         
-        # Instead of returning a Response, redirect to frontend with tokens
+        from django.conf import settings
+        from django.shortcuts import redirect
+        
         redirect_url = f"{settings.FRONTEND_URL}/auth/callback?access={str(refresh.access_token)}&refresh={str(refresh)}"
         
         return redirect(redirect_url)
 
+
 class SessionInfoView(APIView):
-    """
-    Get information about the current authenticated session
-    """
+    """Get information about the current authenticated session"""
     permission_classes = [permissions.IsAuthenticated]
     
     @extend_schema(
@@ -317,12 +289,7 @@ class SessionInfoView(APIView):
     def get(self, request, *args, **kwargs):
         user = request.user
         
-        # Check if user has 2FA enabled
         has_2fa = TOTPDevice.objects.filter(user=user, confirmed=True).exists()
-        
-        # Get the expiry time of the current token
-        # This would typically be calculated from the JWT payload
-        # For simplicity, we'll just return a fixed value
         token_expires_in = 1800  # 30 minutes in seconds
         
         return Response({
@@ -333,10 +300,9 @@ class SessionInfoView(APIView):
             'last_login': user.last_login,
         })
 
+
 class TokenRefreshRateLimitedView(APIView):
-    """
-    Custom token refresh view with rate limiting to prevent abuse
-    """
+    """Custom token refresh view with rate limiting to prevent abuse"""
     permission_classes = []
     throttle_scope = 'token_refresh'
     
@@ -368,23 +334,20 @@ class TokenRefreshRateLimitedView(APIView):
         try:
             refresh = RefreshToken(refresh_token)
             
-            # Get user from token payload
             user_id = refresh.payload.get('user_id')
             user = User.objects.get(id=user_id)
             
-            # Check if user account is still active
             if not user.is_active:
                 return Response(
                     {'error': _('User account is disabled')},
                     status=status.HTTP_401_UNAUTHORIZED
                 )
                 
-            # Generate new access token
             return Response({
                 'access': str(refresh.access_token),
             })
                 
-        except (TokenError, User.DoesNotExist) as e:
+        except (TokenError, User.DoesNotExist):
             return Response(
                 {'error': _('Invalid or expired refresh token')},
                 status=status.HTTP_401_UNAUTHORIZED

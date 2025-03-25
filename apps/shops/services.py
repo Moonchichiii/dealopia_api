@@ -1,18 +1,14 @@
-# apps/shops/services.py
-from django.db.models import Count, Avg, F, Q
-from django.contrib.gis.measure import D
 from django.contrib.gis.geos import Point
+from django.contrib.gis.measure import D
+from django.db.models import Avg, Count, F, Q
 
-from .models import Shop
-from apps.locations.models import Location
 from apps.deals.models import Deal
+from apps.locations.models import Location
+from .models import Shop
 
 
 class ShopService:
-    """
-    Service for shop-related business logic, separating it from views
-    and providing reusable methods for shops management.
-    """
+    """Service for shop-related business logic, separating it from views."""
     
     @staticmethod
     def get_verified_shops(queryset=None):
@@ -31,14 +27,17 @@ class ShopService:
     def get_popular_shops(limit=6):
         """Get popular shops based on deal count and rating"""
         return ShopService.get_verified_shops().annotate(
-            active_deal_count=Count('deals', filter=Q(deals__is_verified=True))
+            active_deal_count=Count(
+                'deals', 
+                filter=Q(deals__is_verified=True)
+            )
         ).filter(
             active_deal_count__gt=0
         ).order_by('-active_deal_count', '-rating')[:limit]
     
     @staticmethod
     def search_shops(search_query, category_id=None):
-        """Search shops by name, description, and optionally filter by category"""
+        """Search shops by name, description, and filter by category"""
         queryset = ShopService.get_verified_shops()
         
         if search_query:
@@ -66,7 +65,7 @@ class ShopService:
         return ShopService.get_verified_shops().filter(
             location__in=nearby_locations
         ).annotate(
-            distance=Distance('location__point', user_location)
+            distance=F('location__point__distance_to')(user_location)
         ).order_by('distance')
     
     @staticmethod
@@ -74,6 +73,7 @@ class ShopService:
         """Get shop details with active deals"""
         shop = Shop.objects.get(id=shop_id)
         
+        # Import here to avoid circular imports
         from apps.deals.services import DealService
         active_deals = DealService.get_active_deals().filter(shop=shop)
         
@@ -94,9 +94,7 @@ class ShopService:
             avg_rating=Avg('rating')
         )['avg_rating'] or 0
         
-        # Round to one decimal place
         avg_rating = round(avg_rating, 1)
-        
         Shop.objects.filter(id=shop_id).update(rating=avg_rating)
         return avg_rating
     

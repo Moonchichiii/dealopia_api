@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from apps.locations.models import Location
 
+
 class LocationSerializer(serializers.ModelSerializer):
     latitude = serializers.SerializerMethodField()
     longitude = serializers.SerializerMethodField()

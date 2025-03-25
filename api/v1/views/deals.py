@@ -1,21 +1,17 @@
-# api/v1/views/deals.py
-from rest_framework import viewsets, filters, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, OpenApiParameter
+from rest_framework import filters, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
+from api.permissions import IsShopOwnerOrReadOnly
+from api.v1.serializers.deals import DealDetailSerializer, DealSerializer
 from apps.deals.models import Deal
 from apps.deals.services import DealService
-from api.v1.serializers.deals import DealSerializer, DealDetailSerializer
-from api.permissions import IsShopOwnerOrReadOnly
 
 
 class DealViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint for deals management with advanced filtering and search capabilities.
-    """
+    """API endpoint for deals management with advanced filtering and search capabilities."""
     queryset = Deal.objects.all()
     serializer_class = DealSerializer
     permission_classes = [IsShopOwnerOrReadOnly]
@@ -29,19 +25,14 @@ class DealViewSet(viewsets.ModelViewSet):
         """Only show active deals by default"""
         queryset = super().get_queryset()
         
-        # Allow admin/staff to see all deals
         if self.request.user.is_staff:
             return queryset
             
-        # For shop owners, show all their deals
         if self.request.user.is_authenticated:
-            # Get deals from shops owned by the user
             owned_shops = self.request.user.shops.all()
             if owned_shops.exists():
-                # Show both active and inactive deals for the owner's shops
                 return queryset.filter(shop__in=owned_shops)
         
-        # For regular users and anonymous, show only active deals
         return DealService.get_active_deals(queryset)
     
     def get_serializer_class(self):
@@ -143,7 +134,7 @@ class DealViewSet(viewsets.ModelViewSet):
         
         return Response(serializer.data)
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False)
     def favorites(self, request):
         """Get the current user's favorite deals"""
         if not request.user.is_authenticated:
@@ -152,7 +143,6 @@ class DealViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_401_UNAUTHORIZED
             )
             
-        # This would require a UserFavorite model which we'll implement separately
         favorite_deals = Deal.objects.filter(favorites__user=request.user)
         serializer = self.get_serializer(favorite_deals, many=True)
         

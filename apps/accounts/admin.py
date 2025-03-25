@@ -4,6 +4,7 @@ from django.utils.translation import gettext_lazy as _
 
 from .models import User
 
+
 class UserAdmin(BaseUserAdmin):
     """Define admin model for custom User model with no username field."""
     
@@ -14,7 +15,6 @@ class UserAdmin(BaseUserAdmin):
                                      'notification_preferences')}),
         (_('Permissions'), {'fields': ('is_active', 'is_staff', 'is_superuser',
                                      'groups', 'user_permissions')}),
-        
         (_('Important dates'), {'fields': ('last_login',)}),
     )
     add_fieldsets = (
@@ -27,5 +27,6 @@ class UserAdmin(BaseUserAdmin):
     search_fields = ('email', 'first_name', 'last_name')
     ordering = ('email',)
     readonly_fields = ('last_login',)
+
 
 admin.site.register(User, UserAdmin)

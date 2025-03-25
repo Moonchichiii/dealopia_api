@@ -1,6 +1,7 @@
 from django.utils import translation
 from django.utils.deprecation import MiddlewareMixin
 
+
 class UserLanguageMiddleware(MiddlewareMixin):
     """Middleware to set language based on user preferences"""
     
@@ -10,5 +11,6 @@ class UserLanguageMiddleware(MiddlewareMixin):
                 user_language = request.user.preferred_language
                 translation.activate(user_language)
                 request.LANGUAGE_CODE = user_language
-            except:
+            except AttributeError:
+                # User doesn't have preferred_language attribute
                 pass

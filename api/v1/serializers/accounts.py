@@ -1,14 +1,15 @@
-# api/v1/serializers/accounts.py
-from rest_framework import serializers
-from apps.accounts.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django_otp.plugins.otp_totp.models import TOTPDevice
+from rest_framework import serializers
+
+from apps.accounts.models import User
 
 
 class UserSerializer(serializers.ModelSerializer):
-    """Enhanced user serializer with additional fields and validations"""
+    """User serializer with 2FA status."""
+    
     has_2fa_enabled = serializers.SerializerMethodField()
     
     class Meta:
@@ -22,12 +23,14 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'email', 'date_joined', 'last_login', 'has_2fa_enabled']
     
     def get_has_2fa_enabled(self, obj):
-        """Check if user has 2FA enabled"""
-        return TOTPDevice.objects.filter(user=obj, confirmed=True).exists()
+        """Check if user has 2FA enabled."""
+        # Use getattr to gracefully handle the case when using a prefetched instance
+        return getattr(obj, 'has_2fa_enabled', None) or TOTPDevice.objects.filter(user=obj, confirmed=True).exists()
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
-    """Enhanced serializer for user registration with strong validation"""
+    """User registration serializer with validation."""
+    
     password = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
     password_confirm = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
     
@@ -40,66 +43,65 @@ class UserCreateSerializer(serializers.ModelSerializer):
         ]
     
     def validate_email(self, value):
-        """Validate email is unique with better error messages"""
-        if User.objects.filter(email__iexact=value).exists():
+        """Validate that email is not already in use."""
+        normalized_email = value.lower()
+        if User.objects.filter(email__iexact=normalized_email).exists():
             raise serializers.ValidationError(
                 _("This email address is already in use. Please use a different email address or try to log in.")
             )
-        return value.lower()  # Normalize to lowercase
+        return normalized_email
     
     def validate_password(self, value):
-        """Validate password using Django's password validators"""
-        try:
-            validate_password(value)
-        except ValidationError as exc:
-            raise serializers.ValidationError(str(exc))
+        """Validate password meets complexity requirements."""
+        validate_password(value)
         return value
     
     def validate(self, attrs):
-        """Cross-field validation"""
+        """Validate that passwords match."""
         if attrs['password'] != attrs['password_confirm']:
             raise serializers.ValidationError({"password_confirm": _("Password fields didn't match.")})
         return attrs
     
     def create(self, validated_data):
-        """Create user with encrypted password and remove password_confirm"""
+        """Create a new user with validated data."""
+        # Remove password confirmation as it's not needed for user creation
         validated_data.pop('password_confirm')
         
-        # You may perform additional operations before creating the user
-        # Such as setting default preferences based on user language
+        # Set default notification preferences if language specified
         if 'preferred_language' in validated_data:
             default_preferences = {
                 'email_notifications': True,
                 'deals_notifications': True,
                 'language': validated_data['preferred_language'],
-                'theme': 'dark'  # Default theme
+                'theme': 'dark'
             }
             validated_data['notification_preferences'] = default_preferences
         
-        user = User.objects.create_user(**validated_data)
-        return user
+        # Use User.objects.create_user to properly hash the password
+        return User.objects.create_user(**validated_data)
 
 
 class PasswordChangeSerializer(serializers.Serializer):
-    """Serializer for password change with current password verification"""
+    """Password change with current password verification."""
+    
     current_password = serializers.CharField(required=True, style={'input_type': 'password'})
     new_password = serializers.CharField(required=True, style={'input_type': 'password'})
     new_password_confirm = serializers.CharField(required=True, style={'input_type': 'password'})
     
     def validate_current_password(self, value):
+        """Verify current password is correct."""
         user = self.context['request'].user
         if not user.check_password(value):
             raise serializers.ValidationError(_("Current password is incorrect."))
         return value
     
     def validate_new_password(self, value):
-        try:
-            validate_password(value, self.context['request'].user)
-        except ValidationError as exc:
-            raise serializers.ValidationError(str(exc))
+        """Validate new password meets complexity requirements."""
+        validate_password(value, self.context['request'].user)
         return value
     
     def validate(self, attrs):
+        """Validate passwords match and aren't the same as current password."""
         if attrs['new_password'] != attrs['new_password_confirm']:
             raise serializers.ValidationError({"new_password_confirm": _("Password fields didn't match.")})
             
@@ -109,6 +111,7 @@ class PasswordChangeSerializer(serializers.Serializer):
         return attrs
     
     def save(self):
+        """Save the new password."""
         user = self.context['request'].user
         user.set_password(self.validated_data['new_password'])
         user.save(update_fields=['password'])
@@ -116,7 +119,8 @@ class PasswordChangeSerializer(serializers.Serializer):
 
 
 class ProfileUpdateSerializer(serializers.ModelSerializer):
-    """Serializer for updating user profile without changing email/password"""
+    """User profile update serializer."""
+    
     class Meta:
         model = User
         fields = [
@@ -126,30 +130,30 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
         ]
     
     def validate_notification_preferences(self, value):
-        """Ensure notification preferences don't lose existing values"""
+        """Merge notification preferences with existing ones."""
         if self.instance and hasattr(self.instance, 'notification_preferences'):
             current_prefs = self.instance.notification_preferences or {}
-            # Update rather than replace
             if isinstance(value, dict):
-                for key, val in value.items():
-                    current_prefs[key] = val
+                current_prefs.update(value)
                 return current_prefs
         return value
 
 
 class EmailChangeRequestSerializer(serializers.Serializer):
-    """Serializer for email change request"""
+    """Email change request serializer."""
+    
     new_email = serializers.EmailField(required=True)
     password = serializers.CharField(required=True, style={'input_type': 'password'})
     
     def validate_new_email(self, value):
-        """Validate new email is unique"""
-        if User.objects.filter(email__iexact=value).exists():
+        """Validate email doesn't already exist."""
+        normalized_email = value.lower()
+        if User.objects.filter(email__iexact=normalized_email).exists():
             raise serializers.ValidationError(_("This email address is already in use."))
-        return value.lower()
+        return normalized_email
     
     def validate_password(self, value):
-        """Validate user password"""
+        """Validate password is correct."""
         user = self.context['request'].user
         if not user.check_password(value):
             raise serializers.ValidationError(_("Password is incorrect."))
