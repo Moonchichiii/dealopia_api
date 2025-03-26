@@ -1,19 +1,32 @@
-from django.contrib.auth import get_user_model
-from django.utils import timezone
-from django.utils.translation import gettext_lazy as _
-from django_otp.plugins.otp_totp.models import TOTPDevice
-from drf_spectacular.utils import extend_schema, OpenApiResponse
-from rest_framework import permissions, status
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework_simplejwt.exceptions import TokenError
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.views import TokenObtainPairView
 import base64
 import io
+import logging
 import pyotp
 import qrcode
 
+from django.contrib.auth import get_user_model
+from django.conf import settings
+from django.shortcuts import redirect
+from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
+
+from django_otp.plugins.otp_totp.models import TOTPDevice
+
+from drf_spectacular.utils import extend_schema, OpenApiResponse
+
+from rest_framework import permissions, status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
+
+# Configure logger
+logger = logging.getLogger(__name__)
+
+# Get the user model
 User = get_user_model()
 
 
@@ -253,29 +266,6 @@ class TwoFactorDisableView(APIView):
         })
 
 
-class SocialAuthCallbackView(APIView):
-    """Handle social authentication callbacks and return JWT tokens"""
-    permission_classes = []
-    
-    def get(self, request, *args, **kwargs):
-        user = request.user
-        
-        if not user.is_authenticated:
-            return Response(
-                {'error': _('Authentication failed')},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
-            
-        refresh = RefreshToken.for_user(user)
-        
-        from django.conf import settings
-        from django.shortcuts import redirect
-        
-        redirect_url = f"{settings.FRONTEND_URL}/auth/callback?access={str(refresh.access_token)}&refresh={str(refresh)}"
-        
-        return redirect(redirect_url)
-
-
 class SessionInfoView(APIView):
     """Get information about the current authenticated session"""
     permission_classes = [permissions.IsAuthenticated]
@@ -299,6 +289,59 @@ class SessionInfoView(APIView):
             'token_expires_in': token_expires_in,
             'last_login': user.last_login,
         })
+
+
+class LogoutView(APIView):
+    """Handle user logout completely by blacklisting tokens and clearing session"""
+    permission_classes = [permissions.IsAuthenticated]
+    
+    @extend_schema(
+        description="Logout the current user, blacklist tokens, and clear session",
+        responses={
+            200: OpenApiResponse(description="Successfully logged out"),
+            401: OpenApiResponse(description="Not authenticated")
+        }
+    )
+    def post(self, request, *args, **kwargs):
+        logger.info(f"Logout requested for user: {request.user.id}")
+        
+        # Blacklist the user's tokens to prevent reuse
+        try:
+            tokens = OutstandingToken.objects.filter(user_id=request.user.id)
+            logger.info(f"Found {tokens.count()} outstanding tokens for user")
+            
+            for token in tokens:
+                _, created = BlacklistedToken.objects.get_or_create(token=token)
+                logger.info(f"Token blacklisted: {token.jti}, created: {created}")
+        except Exception as e:
+            logger.error(f"Error blacklisting tokens: {e}")
+        
+        # Handle session invalidation
+        try:
+            if hasattr(request, 'session'):
+                request.session.flush()
+                logger.info("Session flushed")
+        except Exception as e:
+            logger.error(f"Error flushing session: {e}")
+        
+        # Create response and delete cookies
+        response = Response(
+            {"detail": "Successfully logged out."},
+            status=status.HTTP_200_OK
+        )
+        
+        # Clear all cookies that might be storing auth state
+        for cookie_name in ['sessionid', 'csrftoken', 'refresh_token', 'access_token', 'auth-token', 'refresh-token']:
+            response.delete_cookie(
+                cookie_name, 
+                path='/',
+                domain=None,     # Use None to match the cookie's domain
+                samesite='Lax'   # Match your cookie security settings
+            )
+            logger.info(f"Deleted cookie: {cookie_name}")
+        
+        logger.info(f"Logout successful for user: {request.user.id}")
+        return response
 
 
 class TokenRefreshRateLimitedView(APIView):
@@ -352,3 +395,23 @@ class TokenRefreshRateLimitedView(APIView):
                 {'error': _('Invalid or expired refresh token')},
                 status=status.HTTP_401_UNAUTHORIZED
             )
+
+
+class SocialAuthCallbackView(APIView):
+    """Handle social authentication callbacks and return JWT tokens"""
+    permission_classes = []
+    
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        
+        if not user.is_authenticated:
+            return Response(
+                {'error': _('Authentication failed')},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+            
+        refresh = RefreshToken.for_user(user)
+        
+        redirect_url = f"{settings.FRONTEND_URL}/auth/callback?access={str(refresh.access_token)}&refresh={str(refresh)}"
+        
+        return redirect(redirect_url)
