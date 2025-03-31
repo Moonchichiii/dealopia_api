@@ -6,23 +6,23 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0003_alter_user_managers'),
+        ("accounts", "0003_alter_user_managers"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='user',
-            name='email_change_token',
+            model_name="user",
+            name="email_change_token",
             field=models.CharField(blank=True, max_length=64, null=True),
         ),
         migrations.AddField(
-            model_name='user',
-            name='email_token_created_at',
+            model_name="user",
+            name="email_token_created_at",
             field=models.DateTimeField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='user',
-            name='new_email',
+            model_name="user",
+            name="new_email",
             field=models.EmailField(blank=True, max_length=254, null=True),
         ),
     ]

@@ -4,7 +4,7 @@ from django.utils.deprecation import MiddlewareMixin
 
 class UserLanguageMiddleware(MiddlewareMixin):
     """Middleware to set language based on user preferences"""
-    
+
     def process_request(self, request):
         if request.user.is_authenticated:
             try:

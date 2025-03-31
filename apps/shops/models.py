@@ -16,96 +16,94 @@ class Shop(models.Model):
     """
     Represents a shop/business entity with its details, location and sustainability metrics.
     """
-    name = models.CharField(_('Name'), max_length=255)
+
+    name = models.CharField(_("Name"), max_length=255)
     owner = models.ForeignKey(
-        'accounts.User',
+        "accounts.User",
         on_delete=models.CASCADE,
-        related_name='shops',
-        verbose_name=_('Owner')
+        related_name="shops",
+        verbose_name=_("Owner"),
     )
-    description = models.TextField(_('Description'))
-    short_description = models.CharField(_('Short Description'), max_length=255)
-    logo = models.ImageField(_('Logo'), upload_to='shop_logos/')
-    banner_image = models.ImageField(_('Banner Image'), upload_to='shop_banners/', blank=True)
-    website = models.URLField(_('Website'), blank=True)
-    phone = models.CharField(_('Phone'), max_length=15, blank=True)
-    email = models.EmailField(_('Email'))
+    description = models.TextField(_("Description"))
+    short_description = models.CharField(_("Short Description"), max_length=255)
+    logo = models.ImageField(_("Logo"), upload_to="shop_logos/")
+    banner_image = models.ImageField(
+        _("Banner Image"), upload_to="shop_banners/", blank=True
+    )
+    website = models.URLField(_("Website"), blank=True)
+    phone = models.CharField(_("Phone"), max_length=15, blank=True)
+    email = models.EmailField(_("Email"))
     categories = models.ManyToManyField(
-        'categories.Category',
-        related_name='shops',
-        verbose_name=_('Categories')
+        "categories.Category", related_name="shops", verbose_name=_("Categories")
     )
     location = models.ForeignKey(
-        'locations.Location',
-        on_delete=models.PROTECT,
-        verbose_name=_('Location')
+        "locations.Location", on_delete=models.PROTECT, verbose_name=_("Location")
     )
-    is_verified = models.BooleanField(_('Verified'), default=False)
-    is_featured = models.BooleanField(_('Featured'), default=False)
+    is_verified = models.BooleanField(_("Verified"), default=False)
+    is_featured = models.BooleanField(_("Featured"), default=False)
     rating = models.DecimalField(
-        _('Rating'),
-        max_digits=3,
-        decimal_places=2,
-        default=0.0
+        _("Rating"), max_digits=3, decimal_places=2, default=0.0
     )
-    opening_hours = models.JSONField(_('Opening Hours'), default=default_dict)
-    created_at = models.DateTimeField(_('Created At'), auto_now_add=True)
-    updated_at = models.DateTimeField(_('Updated At'), auto_now=True)
-    
+    opening_hours = models.JSONField(_("Opening Hours"), default=default_dict)
+    created_at = models.DateTimeField(_("Created At"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("Updated At"), auto_now=True)
+
     # Sustainability metrics
-    carbon_neutral = models.BooleanField(_('Carbon Neutral'), default=False)
+    carbon_neutral = models.BooleanField(_("Carbon Neutral"), default=False)
     sustainability_initiatives = models.JSONField(
-        _('Sustainability Initiatives'),
-        default=default_list,
-        blank=True
+        _("Sustainability Initiatives"), default=default_list, blank=True
     )
-    verified_sustainable = models.BooleanField(_('Verified Sustainable'), default=False)
-    
+    verified_sustainable = models.BooleanField(_("Verified Sustainable"), default=False)
+
     class Meta:
-        verbose_name = _('Shop')
-        verbose_name_plural = _('Shops')
-        ordering = ['-created_at']
+        verbose_name = _("Shop")
+        verbose_name_plural = _("Shops")
+        ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=['name']),
-            models.Index(fields=['is_verified', 'is_featured']),
-            models.Index(fields=['rating']),
+            models.Index(fields=["name"]),
+            models.Index(fields=["is_verified", "is_featured"]),
+            models.Index(fields=["rating"]),
         ]
-    
+
     def __str__(self):
         return self.name
-    
+
     @property
     def active_deals_count(self):
         """Get count of active deals for this shop."""
         from django.utils import timezone
+
         return self.deals.filter(
             is_verified=True,
             start_date__lte=timezone.now(),
-            end_date__gte=timezone.now()
+            end_date__gte=timezone.now(),
         ).count()
-    
+
     @property
     def featured_deals(self):
         """Get featured deals for this shop."""
         from django.utils import timezone
+
         return self.deals.filter(
             is_verified=True,
             is_featured=True,
             start_date__lte=timezone.now(),
-            end_date__gte=timezone.now()
-        ).order_by('-created_at')
-    
+            end_date__gte=timezone.now(),
+        ).order_by("-created_at")
+
     def has_category(self, category_id):
         """Check if shop belongs to a specific category."""
         return self.categories.filter(id=category_id).exists()
-    
+
     def update_rating(self):
         """Update shop rating based on reviews."""
         from django.db.models import Avg
-        avg_rating = self.reviews.filter(is_approved=True).aggregate(
-            avg=Avg('rating')
-        )['avg'] or 0
-        
+
+        avg_rating = (
+            self.reviews.filter(is_approved=True).aggregate(avg=Avg("rating"))["avg"]
+            or 0
+        )
+
         self.rating = round(avg_rating, 2)
-        self.save(update_fields=['rating'])
+        self.save(update_fields=["rating"])
         return self.rating

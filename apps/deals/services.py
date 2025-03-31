@@ -1,281 +1,313 @@
+"""Services for deal operations and imports."""
+
+from logging import getLogger
+from urllib.parse import urlparse
+
+from cloudinary.uploader import upload
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
-from django.db import models
-from django.db.models import F, Q, Count, Prefetch
+from django.core.cache import cache
+from django.db import transaction
+from django.db.models import Case, Count, F, IntegerField, Q, Value, When
 from django.utils import timezone
 
 from apps.categories.models import Category
-from core.utils.cache import cache_result
+from apps.shops.models import Shop
+
+from .api import EcoRetailerAPI
 from .models import Deal
+
+logger = getLogger(__name__)
 
 
 class DealService:
-    """
-    Service for deal-related business logic, separating it from views
-    and providing reusable methods for deals management.
-    """
-    
+    """Clean, powerful service for deal operations."""
+
     @staticmethod
     def get_active_deals(queryset=None):
-        """
-        Return only currently active deals (not expired).
-        
-        Optimizes query performance by default with select_related for Shop
-        and prefetch_related for Categories.
-        """
+        """Get active deals with efficient queries."""
+        now = timezone.now()
+
         queryset = queryset or Deal.objects.all()
-        now = timezone.now()
-        
         return (
-            queryset
-            .filter(
-                start_date__lte=now,
-                end_date__gte=now,
-                is_verified=True
-            )
-            .select_related('shop')
-            .prefetch_related('categories')
+            queryset.filter(is_verified=True, start_date__lte=now, end_date__gte=now)
+            .select_related("shop")
+            .prefetch_related("categories")
         )
-    
+
     @staticmethod
-    @cache_result(timeout=1800, prefix="featured_deals")
-    def get_featured_deals(limit=6):
-        """Get featured deals for homepage."""
-        return (
-            DealService.get_active_deals()
-            .filter(is_featured=True)
-            .order_by('-created_at')[:limit]
-        )
-    
-    @staticmethod
-    @cache_result(timeout=3600, prefix="expiring_deals")
-    def get_expiring_soon_deals(days=3, limit=6):
-        """Get deals that are expiring within the specified number of days."""
-        now = timezone.now()
-        threshold = now + timezone.timedelta(days=days)
-        
-        return (
-            DealService.get_active_deals()
-            .filter(end_date__lte=threshold)
-            .order_by('end_date')[:limit]
-        )
-    
-    @staticmethod
-    @cache_result(timeout=3600, prefix="new_deals")
-    def get_new_deals(days=7, limit=6):
-        """Get deals that were created within the specified number of days."""
-        threshold = timezone.now() - timezone.timedelta(days=days)
-        
-        return (
-            DealService.get_active_deals()
-            .filter(created_at__gte=threshold)
-            .order_by('-created_at')[:limit]
-        )
-    
-    @staticmethod
-    def search_deals(search_query, category_id=None):
-        """Search deals by title, description, and optionally filter by category."""
-        queryset = DealService.get_active_deals()
-        
-        if search_query:
-            queryset = queryset.filter(
-                Q(title__icontains=search_query) |
-                Q(description__icontains=search_query) |
-                Q(shop__name__icontains=search_query) |
-                Q(categories__name__icontains=search_query)
-            ).distinct()
-        
-        if category_id:
-            category_ids = [category_id]
-            try:
-                category = Category.objects.get(id=category_id)
+    def get_featured_deals(limit=6, category_id=None):
+        """Get featured deals with caching."""
+        cache_key = f"featured_deals:{category_id or 'all'}:{limit}"
+        result = cache.get(cache_key)
+
+        if result is None:
+            queryset = DealService.get_active_deals().filter(is_featured=True)
+
+            if category_id:
+                category_ids = [category_id]
                 # Include child categories
-                category_ids.extend(category.children.values_list('id', flat=True))
-            except Category.DoesNotExist:
-                pass
-                
-            queryset = queryset.filter(categories__id__in=category_ids)
-        
-        return queryset
-    
+                try:
+                    category = Category.objects.get(id=category_id)
+                    category_ids.extend(category.children.values_list("id", flat=True))
+                except Category.DoesNotExist:
+                    pass
+
+                queryset = queryset.filter(categories__id__in=category_ids).distinct()
+
+            result = list(
+                queryset.order_by("-sustainability_score", "-created_at")[:limit]
+            )
+            cache.set(cache_key, result, 1800)  # Cache for 30 minutes
+
+        return result
+
     @staticmethod
-    @cache_result(timeout=3600, prefix="category")
-    def get_deals_by_category(category_id, limit=12):
-        """Get deals by category, including child categories."""
-        category_ids = [category_id]
-        
-        try:
-            category = Category.objects.get(id=category_id)
-            # Include child categories
-            category_ids.extend(category.children.values_list('id', flat=True))
-        except Category.DoesNotExist:
-            pass
-            
-        return (
-            DealService.get_active_deals()
-            .filter(categories__id__in=category_ids)
-            .distinct()
-            .order_by('-is_featured', '-created_at')[:limit]
-        )
-    
-    @staticmethod
-    @cache_result(timeout=1800, prefix="nearby_deals")
-    def get_deals_by_location(latitude, longitude, radius_km=10):
-        """Get deals near a specific location using geodjango."""
+    def get_deals_near_location(
+        latitude,
+        longitude,
+        radius_km=10,
+        limit=20,
+        min_sustainability=None,
+        categories=None,
+    ):
+        """
+        Find sustainable deals near a location with optional filters.
+        Combines location and sustainability in one optimized query.
+        """
         user_location = Point(longitude, latitude, srid=4326)
-        radius_km = min(max(0.1, radius_km), 50)  # Between 100m and 50km
-        
-        return (
-            DealService.get_active_deals()
-            .filter(
-                shop__location__point__distance_lte=(user_location, D(km=radius_km))
+
+        # Start with active deals
+        queryset = DealService.get_active_deals()
+
+        # Add location filter with distance annotation
+        queryset = queryset.filter(
+            shop__location__point__dwithin=(user_location, D(km=radius_km))
+        ).annotate(distance=Distance("shop__location__point", user_location))
+
+        # Add optional sustainability filter
+        if min_sustainability is not None:
+            queryset = queryset.filter(sustainability_score__gte=min_sustainability)
+
+        # Add optional category filter
+        if categories:
+            if not isinstance(categories, (list, tuple)):
+                categories = [categories]
+            queryset = queryset.filter(categories__id__in=categories).distinct()
+
+        # Custom ordering that balances distance and sustainability
+        queryset = queryset.annotate(
+            # Weighted score that considers both distance and sustainability
+            relevance_score=Case(
+                # High sustainability, close by (best)
+                When(sustainability_score__gte=8, distance__lte=2, then=Value(1)),
+                # High sustainability, medium distance
+                When(sustainability_score__gte=8, distance__lte=5, then=Value(2)),
+                # Medium sustainability, close by
+                When(sustainability_score__gte=5, distance__lte=2, then=Value(3)),
+                # High sustainability, further away
+                When(sustainability_score__gte=8, then=Value(4)),
+                # Medium sustainability, medium distance
+                When(sustainability_score__gte=5, distance__lte=5, then=Value(5)),
+                # Close by, lower sustainability
+                When(distance__lte=2, then=Value(6)),
+                # Everything else
+                default=Value(7),
+                output_field=IntegerField(),
             )
-            .annotate(
-                distance=Distance('shop__location__point', user_location)
-            )
-            .order_by('distance')
-        )
-    
+        ).order_by("relevance_score", "distance")
+
+        return queryset[:limit]
+
     @staticmethod
-    def record_view(deal_id):
-        """Increment the view count for a deal."""
-        Deal.objects.filter(id=deal_id).update(views_count=F('views_count') + 1)
-    
+    def record_interaction(deal_id, interaction_type):
+        """Record view or click with atomic update."""
+        if interaction_type not in ("view", "click"):
+            return False
+
+        field = f"{interaction_type}s_count"
+
+        # Use F() to ensure atomic update
+        update_kwargs = {field: F(field) + 1}
+        Deal.objects.filter(id=deal_id).update(**update_kwargs)
+
+        return True
+
     @staticmethod
-    def record_click(deal_id):
-        """Increment the click count for a deal."""
-        Deal.objects.filter(id=deal_id).update(clicks_count=F('clicks_count') + 1)
-    
-    @staticmethod
-    @cache_result(timeout=1800, prefix="related_deals")
     def get_related_deals(deal, limit=3):
-        """Get related deals based on category and excluding the current deal."""
+        """Get related deals using multiple relevance factors."""
         if isinstance(deal, int):
             try:
                 deal = Deal.objects.get(id=deal)
             except Deal.DoesNotExist:
                 return []
-        
-        category_ids = list(deal.categories.values_list('id', flat=True))
-        
+
+        category_ids = list(deal.categories.values_list("id", flat=True))
         if not category_ids:
             return []
-        
-        # First get deals from same shop and categories
-        same_shop_deals = (
-            DealService.get_active_deals()
-            .filter(
-                shop=deal.shop,
-                categories__id__in=category_ids
-            )
-            .exclude(id=deal.id)
-            .distinct()
-        )
-        
-        # Calculate how many same-shop deals to include
-        same_shop_count = min(same_shop_deals.count(), limit // 2)
-        result = list(same_shop_deals.order_by('-is_featured', '-created_at')[:same_shop_count])
-        
-        # Fill remaining slots with other shop deals
-        needed_count = limit - len(result)
-        if needed_count > 0:
-            other_deals = (
+
+        # Start with active deals excluding the current one
+        queryset = DealService.get_active_deals().exclude(id=deal.id)
+
+        # Find deals with matching categories
+        queryset = queryset.filter(categories__id__in=category_ids).distinct()
+
+        # Annotate with relevance score for smarter ranking
+        queryset = queryset.annotate(
+            same_shop=Case(
+                When(shop_id=deal.shop_id, then=Value(1)),
+                default=Value(0),
+                output_field=IntegerField(),
+            ),
+            # Count matching categories
+            category_matches=Count(
+                "categories", filter=Q(categories__id__in=category_ids)
+            ),
+        ).order_by("-same_shop", "-category_matches", "-sustainability_score")
+
+        return queryset[:limit]
+
+    @staticmethod
+    def get_sustainable_deals(min_score=7.0, limit=10):
+        """Get highly sustainable deals."""
+        cache_key = f"sustainable_deals:{min_score}:{limit}"
+        result = cache.get(cache_key)
+
+        if result is None:
+            result = list(
                 DealService.get_active_deals()
-                .filter(categories__id__in=category_ids)
-                .exclude(id=deal.id)
-                .exclude(shop=deal.shop)
-                .distinct()
-                .order_by('-is_featured', '-created_at')[:needed_count]
+                .filter(sustainability_score__gte=min_score)
+                .order_by("-sustainability_score", "-created_at")[:limit]
             )
-            
-            result.extend(other_deals)
-        
+            cache.set(cache_key, result, 3600)  # Cache for 1 hour
+
         return result
-    
+
+
+class DealImportService:
+    """Service for importing deals from various eco-friendly sources."""
+
     @staticmethod
-    @cache_result(timeout=86400, prefix="popular_deals")
-    def get_popular_deals(limit=6):
-        """Get most viewed/clicked deals."""
-        return (
-            DealService.get_active_deals()
-            .order_by('-views_count', '-clicks_count')[:limit]
-        )
-        
+    def import_from_source(source, limit=100, **params):
+        """Import deals from a specific API source."""
+        try:
+            api_client = EcoRetailerAPI(source)
+            deals_data = api_client.fetch_deals(limit, **params)
+
+            return DealImportService.save_deals_data(deals_data)
+        except Exception as e:
+            logger.error(f"Error importing deals from {source}: {str(e)}")
+            return {"success": False, "error": str(e), "created": 0, "updated": 0}
+
     @staticmethod
-    @cache_result(timeout=1800, prefix="multi_category")
-    def get_deals_by_multiple_categories(category_ids, limit=12):
-        """Get deals that match any of the provided categories."""
-        if not category_ids:
-            return []
-        
-        all_category_ids = list(category_ids)
-        
-        # Include child categories
-        child_categories = Category.objects.filter(parent_id__in=category_ids)
-        all_category_ids.extend(child_categories.values_list('id', flat=True))
-        
-        return (
-            DealService.get_active_deals()
-            .filter(categories__id__in=all_category_ids)
-            .distinct()
-            .order_by('-is_featured', '-created_at')[:limit]
-        )
-    
-    @staticmethod
-    @cache_result(timeout=3600, prefix="sustainable_deals")
-    def get_sustainable_deals(limit=10):
-        """Get deals from sustainable brands and categories."""
-        sustainable_categories = Category.objects.filter(
-            Q(name__icontains='sustain') | Q(is_eco_friendly=True)
-        ).values_list('id', flat=True)
-        
-        if not sustainable_categories:
-            return DealService.get_featured_deals(limit)
-        
-        return (
-            DealService.get_active_deals()
-            .filter(categories__id__in=sustainable_categories)
-            .distinct()
-            .order_by('-is_featured', '-created_at')[:limit]
-        )
-    
-    @staticmethod
-    @cache_result(timeout=1800, prefix="deals_by_price")
-    def get_deals_by_price_range(min_price=None, max_price=None, limit=12):
-        """Get deals within a specific price range."""
-        queryset = DealService.get_active_deals()
-        
-        if min_price is not None:
-            queryset = queryset.filter(discounted_price__gte=min_price)
-        
-        if max_price is not None:
-            queryset = queryset.filter(discounted_price__lte=max_price)
-        
-        return queryset.order_by('-is_featured', '-created_at')[:limit]
-    
-    @staticmethod
-    @cache_result(timeout=1800, prefix="deals_by_discount")
-    def get_deals_by_minimum_discount(min_discount_percentage=20, limit=12):
-        """Get deals with a minimum discount percentage."""
-        return (
-            DealService.get_active_deals()
-            .filter(discount_percentage__gte=min_discount_percentage)
-            .order_by('-discount_percentage')[:limit]
-        )
-    
-    @staticmethod
-    @cache_result(timeout=3600, prefix="trending_deals")
-    def get_trending_deals(days=7, limit=10):
-        """Get trending deals based on views and clicks in the last X days."""
-        threshold_date = timezone.now() - timezone.timedelta(days=days)
-        
-        return (
-            DealService.get_active_deals()
-            .filter(created_at__gte=threshold_date)
-            .annotate(
-                score=F('views_count') + (F('clicks_count') * 3)
-            )
-            .filter(score__gt=0)
-            .order_by('-score')[:limit]
-        )
+    @transaction.atomic
+    def save_deals_data(deals_data):
+        """Save standardized deals data to the database."""
+        created_count = 0
+        updated_count = 0
+
+        for deal_data in deals_data:
+            try:
+                # Get or create shop
+                shop_name = deal_data.get("shop_name")
+                shop_website = deal_data.get("shop_website")
+
+                if not shop_name:
+                    continue
+
+                shop, shop_created = Shop.objects.get_or_create(
+                    name=shop_name,
+                    defaults={
+                        "website": shop_website,
+                        "is_verified": True,
+                        "short_description": f"Imported from {deal_data.get('source')}",
+                    },
+                )
+
+                # Get or create categories
+                category_names = deal_data.get("category_names", [])
+                categories = []
+
+                for name in category_names:
+                    if not name:
+                        continue
+
+                    category, _ = Category.objects.get_or_create(
+                        name=name, defaults={"is_active": True}
+                    )
+                    categories.append(category)
+
+                # Handle image
+                image_url = deal_data.get("image_url")
+                if image_url:
+                    # Check if the URL is valid
+                    parsed_url = urlparse(image_url)
+                    if parsed_url.scheme and parsed_url.netloc:
+                        # Upload to Cloudinary for optimization
+                        try:
+                            upload_result = upload(
+                                image_url,
+                                folder="deals",
+                                transformation=[
+                                    {"quality": "auto:good"},
+                                    {"fetch_format": "auto"},
+                                ],
+                            )
+                            image = upload_result.get("public_id")
+                        except Exception as e:
+                            logger.warning(
+                                f"Error uploading image to Cloudinary: {str(e)}"
+                            )
+                            image = None
+                    else:
+                        image = None
+                else:
+                    image = None
+
+                # Prepare deal data
+                deal_fields = {
+                    "title": deal_data.get("title"),
+                    "description": deal_data.get("description", ""),
+                    "original_price": deal_data.get("original_price"),
+                    "discounted_price": deal_data.get("discounted_price"),
+                    "discount_percentage": deal_data.get("discount_percentage"),
+                    "image": image,
+                    "start_date": timezone.now(),
+                    "end_date": timezone.now()
+                    + timezone.timedelta(days=30),  # Default 30 days
+                    "redemption_link": deal_data.get("redemption_link", ""),
+                    "is_verified": True,
+                    "source": deal_data.get("source"),
+                    "external_id": deal_data.get("external_id"),
+                    "sustainability_score": deal_data.get("sustainability_score", 5.0),
+                    "eco_certifications": deal_data.get("eco_certifications", []),
+                    "local_production": deal_data.get("local_production", False),
+                }
+
+                # Get or update deal
+                deal, created = Deal.objects.update_or_create(
+                    shop=shop,
+                    external_id=deal_data.get("external_id"),
+                    defaults=deal_fields,
+                )
+
+                # Add categories
+                if categories:
+                    deal.categories.set(categories)
+
+                if created:
+                    created_count += 1
+                else:
+                    updated_count += 1
+
+            except Exception as e:
+                logger.error(f"Error saving deal: {str(e)}, data: {deal_data}")
+                continue
+
+        return {
+            "success": True,
+            "created": created_count,
+            "updated": updated_count,
+            "total": created_count + updated_count,
+        }

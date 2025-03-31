@@ -10,36 +10,74 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('categories', '0001_initial'),
-        ('locations', '0001_initial'),
+        ("categories", "0001_initial"),
+        ("locations", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Shop',
+            name="Shop",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255)),
-                ('description', models.TextField()),
-                ('short_description', models.CharField(max_length=255)),
-                ('logo', models.ImageField(upload_to='shop_logos/')),
-                ('banner_image', models.ImageField(blank=True, upload_to='shop_banners/')),
-                ('website', models.URLField(blank=True)),
-                ('phone', models.CharField(blank=True, max_length=15)),
-                ('email', models.EmailField(max_length=254)),
-                ('is_verified', models.BooleanField(default=False)),
-                ('is_featured', models.BooleanField(default=False)),
-                ('rating', models.DecimalField(decimal_places=2, default=0.0, max_digits=3)),
-                ('opening_hours', models.JSONField(default=dict)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('categories', models.ManyToManyField(related_name='shops', to='categories.category')),
-                ('location', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='locations.location')),
-                ('owner', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='shops', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=255)),
+                ("description", models.TextField()),
+                ("short_description", models.CharField(max_length=255)),
+                ("logo", models.ImageField(upload_to="shop_logos/")),
+                (
+                    "banner_image",
+                    models.ImageField(blank=True, upload_to="shop_banners/"),
+                ),
+                ("website", models.URLField(blank=True)),
+                ("phone", models.CharField(blank=True, max_length=15)),
+                ("email", models.EmailField(max_length=254)),
+                ("is_verified", models.BooleanField(default=False)),
+                ("is_featured", models.BooleanField(default=False)),
+                (
+                    "rating",
+                    models.DecimalField(decimal_places=2, default=0.0, max_digits=3),
+                ),
+                ("opening_hours", models.JSONField(default=dict)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "categories",
+                    models.ManyToManyField(
+                        related_name="shops", to="categories.category"
+                    ),
+                ),
+                (
+                    "location",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        to="locations.location",
+                    ),
+                ),
+                (
+                    "owner",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="shops",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'indexes': [models.Index(fields=['name'], name='shops_shop_name_da338f_idx'), models.Index(fields=['is_verified', 'is_featured'], name='shops_shop_is_veri_b927fe_idx')],
+                "indexes": [
+                    models.Index(fields=["name"], name="shops_shop_name_da338f_idx"),
+                    models.Index(
+                        fields=["is_verified", "is_featured"],
+                        name="shops_shop_is_veri_b927fe_idx",
+                    ),
+                ],
             },
         ),
     ]

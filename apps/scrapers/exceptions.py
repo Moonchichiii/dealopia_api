@@ -10,16 +10,16 @@ class SentryLoggerExtension:
 
     @classmethod
     def from_crawler(cls, crawler):
-        if not crawler.settings.getbool('SENTRY_LOGGING_ENABLED'):
+        if not crawler.settings.getbool("SENTRY_LOGGING_ENABLED"):
             raise NotConfigured
-        return cls(crawler.settings.get('SENTRY_DSN'))
+        return cls(crawler.settings.get("SENTRY_DSN"))
 
     def spider_error(self, failure, response, spider):
         capture_exception(
-            failure.value, 
+            failure.value,
             extra={
-                'spider': spider.name,
-                'url': response.url,
-                'status': response.status
-            }
+                "spider": spider.name,
+                "url": response.url,
+                "status": response.status,
+            },
         )

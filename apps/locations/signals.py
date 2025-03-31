@@ -1,18 +1,23 @@
-from django.db.models.signals import post_save, pre_delete
+from django.core.cache import cache
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
-# Import your location model here
-# from apps.locations.models import Location
+from apps.locations.models import Location
 
-# Example signal handler:
-# @receiver(post_save, sender=Location)
-# def location_post_save(sender, instance, created, **kwargs):
-#     """
-#     Signal handler for when a location is saved
-#     """
-#     if created:
-#         # Do something when a new location is created
-#         pass
-#     else:
-#         # Do something when an existing location is updated
-#         pass
+
+@receiver(post_save, sender=Location)
+def location_saved(sender, instance, **kwargs):
+    """Clear caches when a location is saved."""
+    cache.delete(f"location:{instance.id}")
+    cache.delete_pattern(f"popular_cities:*")
+    cache.delete_pattern(f"locations_in_city:{instance.city.lower()}:*")
+    cache.delete("location_stats")
+
+
+@receiver(post_delete, sender=Location)
+def location_deleted(sender, instance, **kwargs):
+    """Clear caches when a location is deleted."""
+    cache.delete(f"location:{instance.id}")
+    cache.delete_pattern(f"popular_cities:*")
+    cache.delete_pattern(f"locations_in_city:{instance.city.lower()}:*")
+    cache.delete("location_stats")

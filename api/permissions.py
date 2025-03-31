@@ -1,35 +1,37 @@
 from rest_framework import permissions
 
 
+def check_object_owner(obj, user):
+    """Helper function to check if user is the owner of an object."""
+    if hasattr(obj, "owner"):
+        return obj.owner == user
+    elif hasattr(obj, "user"):
+        return obj.user == user
+    return False
+
+
 class IsOwnerOrReadOnly(permissions.BasePermission):
-    """Custom permission to only allow owners of an object to edit it."""
-    
+    """Allows only object owners to perform write operations."""
+
     def has_object_permission(self, request, view, obj):
         if request.method in permissions.SAFE_METHODS:
             return True
-            
-        if hasattr(obj, 'owner'):
-            return obj.owner == request.user
-        elif hasattr(obj, 'user'):
-            return obj.user == request.user
-        return False
+        return check_object_owner(obj, request.user)
 
 
 class IsShopOwnerOrReadOnly(permissions.BasePermission):
-    """Custom permission for deals to only allow shop owners to edit them."""
-    
+    """Restricts deal modifications to shop owners only."""
+
     def has_object_permission(self, request, view, obj):
         if request.method in permissions.SAFE_METHODS:
             return True
-            
-        if hasattr(obj, 'shop') and hasattr(obj.shop, 'owner'):
-            return obj.shop.owner == request.user
-        return False
+
+        return hasattr(obj, "shop") and hasattr(obj.shop, "owner") and obj.shop.owner == request.user
 
 
 class IsAdminOrReadOnly(permissions.BasePermission):
-    """Custom permission to only allow admins to edit, but anyone to view."""
-    
+    """Limits write operations to admin users only."""
+
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
             return True

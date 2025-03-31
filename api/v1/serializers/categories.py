@@ -4,25 +4,31 @@ from apps.categories.models import Category
 
 
 class CategoryListSerializer(serializers.ModelSerializer):
-    """Simplified serializer for Category model when used in listings."""
-    
     class Meta:
         model = Category
-        fields = ['id', 'name', 'icon', 'image', 'is_active']
+        fields = ["id", "name", "icon", "image", "is_active"]
 
 
 class CategorySerializer(serializers.ModelSerializer):
     subcategories = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = Category
         fields = [
-            'id', 'name', 'description', 'icon', 'image',
-            'parent', 'order', 'is_active', 'subcategories',
-            'created_at', 'updated_at'
+            "id",
+            "name",
+            "description",
+            "icon",
+            "image",
+            "parent",
+            "order",
+            "is_active",
+            "subcategories",
+            "created_at",
+            "updated_at",
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
-    
+        read_only_fields = ["id", "created_at", "updated_at"]
+
     def get_subcategories(self, obj):
         if obj.children.exists():
             return CategorySerializer(obj.children.all(), many=True).data

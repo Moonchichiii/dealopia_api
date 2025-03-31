@@ -1,7 +1,9 @@
 """Signal handlers for the scrapers app."""
+
 from django.db.models.signals import post_save, pre_delete
 from django.dispatch import receiver
-from .scrapers import clean_deal_data, capture_exception
+
+from .scrapers import capture_exception, clean_deal_data
 
 # NOTE: The following signal handlers are commented out because the models don't exist yet
 # Uncomment when the models are implemented

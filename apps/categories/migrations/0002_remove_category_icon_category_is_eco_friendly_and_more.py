@@ -6,22 +6,22 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('categories', '0001_initial'),
+        ("categories", "0001_initial"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='category',
-            name='icon',
+            model_name="category",
+            name="icon",
         ),
         migrations.AddField(
-            model_name='category',
-            name='is_eco_friendly',
+            model_name="category",
+            name="is_eco_friendly",
             field=models.BooleanField(default=False),
         ),
         migrations.AddField(
-            model_name='category',
-            name='sustainability_impact',
+            model_name="category",
+            name="sustainability_impact",
             field=models.TextField(blank=True),
         ),
     ]

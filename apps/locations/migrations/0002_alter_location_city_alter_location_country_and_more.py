@@ -6,26 +6,31 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('locations', '0001_initial'),
+        ("locations", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='location',
-            name='city',
+            model_name="location",
+            name="city",
             field=models.CharField(db_index=True, max_length=100),
         ),
         migrations.AlterField(
-            model_name='location',
-            name='country',
+            model_name="location",
+            name="country",
             field=models.CharField(db_index=True, max_length=100),
         ),
         migrations.AddIndex(
-            model_name='location',
-            index=models.Index(fields=['postal_code'], name='locations_l_postal__01f758_idx'),
+            model_name="location",
+            index=models.Index(
+                fields=["postal_code"], name="locations_l_postal__01f758_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='location',
-            index=models.Index(fields=['city', 'country', 'postal_code'], name='locations_l_city_ba5543_idx'),
+            model_name="location",
+            index=models.Index(
+                fields=["city", "country", "postal_code"],
+                name="locations_l_city_ba5543_idx",
+            ),
         ),
     ]
