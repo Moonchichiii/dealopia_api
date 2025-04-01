@@ -1,31 +1,26 @@
 import time
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-
-from drf_spectacular.utils import (
-    OpenApiParameter, 
-    OpenApiResponse,
-    extend_schema
-)
+from drf_spectacular.utils import (OpenApiParameter, OpenApiResponse,
+                                   extend_schema)
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from api.permissions import IsOwnerOrReadOnly
-from api.v1.serializers.accounts import (
-    EmailChangeRequestSerializer,
-    PasswordChangeSerializer,
-    ProfileUpdateSerializer,
-    UserCreateSerializer, 
-    UserSerializer
-)
+from api.v1.serializers.accounts import (EmailChangeRequestSerializer,
+                                         PasswordChangeSerializer,
+                                         ProfileUpdateSerializer,
+                                         UserCreateSerializer, UserSerializer)
 from apps.accounts.models import User
 
 
 class UserViewSet(viewsets.ModelViewSet):
     """User management API with security features and granular permissions"""
+
     queryset = User.objects.all()
     serializer_class = UserSerializer
     lookup_field = "email"
@@ -131,7 +126,9 @@ class UserViewSet(viewsets.ModelViewSet):
         user.create_email_change_request(new_email)
 
         return self._create_detail_response(
-            "Verification email sent to {email}. Please check your inbox.".format(email=new_email)
+            "Verification email sent to {email}. Please check your inbox.".format(
+                email=new_email
+            )
         )
 
     @extend_schema(
@@ -155,13 +152,14 @@ class UserViewSet(viewsets.ModelViewSet):
         token = request.query_params.get("token")
         if not token:
             return self._create_detail_response(
-                "Verification token is required.", 
-                status.HTTP_400_BAD_REQUEST
+                "Verification token is required.", status.HTTP_400_BAD_REQUEST
             )
 
         try:
             request.user.confirm_email_change(token)
-            return self._create_detail_response("Email address has been changed successfully.")
+            return self._create_detail_response(
+                "Email address has been changed successfully."
+            )
         except Exception as e:
             return self._create_detail_response(str(e), status.HTTP_400_BAD_REQUEST)
 

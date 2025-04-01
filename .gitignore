@@ -121,3 +121,5 @@ geckodriver.log
 
 # Local development
 local/
+
+pytest_cache/

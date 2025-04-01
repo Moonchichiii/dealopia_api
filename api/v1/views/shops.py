@@ -1,17 +1,20 @@
+from rest_framework.permissions import AllowAny
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+
 from api.v1.serializers.deals import DealSerializer
-from api.v1.serializers.shops import ShopSerializer
+from api.v1.serializers.shops import ShopSerializer, ShopCreateSerializer
 from apps.shops.models import Shop
 
 
 class ShopViewSet(viewsets.ModelViewSet):
     """ViewSet for Shop model with filtering, searching, and custom actions."""
-    
+
     queryset = Shop.objects.all()
+    permission_classes = [AllowAny]
     serializer_class = ShopSerializer
     filter_backends = [
         DjangoFilterBackend,
@@ -22,6 +25,11 @@ class ShopViewSet(viewsets.ModelViewSet):
     search_fields = ["name", "description", "short_description"]
     ordering_fields = ["created_at", "name", "rating"]
     ordering = ["-created_at"]
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return ShopCreateSerializer
+        return ShopSerializer
 
     @action(detail=False)
     def featured(self, request):

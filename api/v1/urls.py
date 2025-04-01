@@ -10,26 +10,23 @@ from rest_framework_simplejwt.views import TokenVerifyView
 
 # Local
 from api.v1.views.accounts import UserViewSet
-from api.v1.views.auth import (
-    CustomTokenObtainPairView,
-    SessionInfoView,
-    SocialAuthCallbackView,
-    TokenRefreshRateLimitedView,
-    TwoFactorDisableView,
-    TwoFactorSetupView,
-    TwoFactorVerifyView,
-)
+from api.v1.views.auth import (CustomTokenObtainPairView, SessionInfoView,
+                               SocialAuthCallbackView,
+                               TokenRefreshRateLimitedView,
+                               TwoFactorDisableView, TwoFactorSetupView,
+                               TwoFactorVerifyView)
 from api.v1.views.categories import CategoryViewSet
 from api.v1.views.deals import DealViewSet
 from api.v1.views.locations import LocationViewSet
 from api.v1.views.shops import ShopViewSet
-
+from api.v1.views.products import ProductViewSet
 
 # Set up the default router
 router = DefaultRouter()
 router.register(r"users", UserViewSet)
 router.register(r"deals", DealViewSet)
 router.register(r"shops", ShopViewSet)
+router.register(r"products", ProductViewSet, basename="product")
 router.register(r"categories", CategoryViewSet)
 router.register(r"locations", LocationViewSet)
 

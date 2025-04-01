@@ -1,7 +1,6 @@
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
-
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from rest_framework import serializers
 
@@ -67,7 +66,9 @@ class UserCreateSerializer(serializers.ModelSerializer):
         normalized_email = value.lower()
         if User.objects.filter(email__iexact=normalized_email).exists():
             raise serializers.ValidationError(
-                _("This email address is already in use. Please use a different email address or try to log in.")
+                _(
+                    "This email address is already in use. Please use a different email address or try to log in."
+                )
             )
         return normalized_email
 
@@ -126,7 +127,11 @@ class PasswordChangeSerializer(serializers.Serializer):
 
         if attrs["current_password"] == attrs["new_password"]:
             raise serializers.ValidationError(
-                {"new_password": _("New password cannot be the same as current password.")}
+                {
+                    "new_password": _(
+                        "New password cannot be the same as current password."
+                    )
+                }
             )
 
         return attrs

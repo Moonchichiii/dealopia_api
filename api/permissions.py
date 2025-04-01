@@ -26,7 +26,11 @@ class IsShopOwnerOrReadOnly(permissions.BasePermission):
         if request.method in permissions.SAFE_METHODS:
             return True
 
-        return hasattr(obj, "shop") and hasattr(obj.shop, "owner") and obj.shop.owner == request.user
+        return (
+            hasattr(obj, "shop")
+            and hasattr(obj.shop, "owner")
+            and obj.shop.owner == request.user
+        )
 
 
 class IsAdminOrReadOnly(permissions.BasePermission):

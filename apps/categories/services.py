@@ -33,14 +33,12 @@ class CategoryService:
             category_data = {
                 "id": category.id,
                 "name": category.name,
-                "icon": category.icon,
                 "image": category.image.url if category.image else None,
                 "description": category.description,
                 "subcategories": [
                     {
                         "id": sub.id,
                         "name": sub.name,
-                        "icon": sub.icon,
                         "image": sub.image.url if sub.image else None,
                         "description": sub.description,
                     }

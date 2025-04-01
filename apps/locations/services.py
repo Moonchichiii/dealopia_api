@@ -2,106 +2,80 @@ from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
 from django.core.cache import cache
-from django.db.models import Count
+from django.db.models import Count, Q
 
-from .models import Location
+from apps.locations.geocoding import external_geocode_api
+from apps.locations.models import Location
 
 
 class LocationService:
-    """Streamlined service for location operations with optimized spatial queries."""
+    """Service class for location-related operations."""
 
     @staticmethod
-    def get_location_by_id(location_id):
-        """Get a location by ID with efficient caching."""
-        cache_key = f"location:{location_id}"
-        location = cache.get(cache_key)
+    def get_nearby_locations(lat, lng, radius_km, limit=50):
+        """
+        Find locations within a specified radius from coordinates.
 
-        if not location:
-            try:
-                location = Location.objects.get(id=location_id)
-                cache.set(cache_key, location, 86400)  # Cache for 24 hours
-            except Location.DoesNotExist:
-                return None
+        Args:
+            lat: Latitude as a float
+            lng: Longitude as a float
+            radius_km: Search radius in kilometers
+            limit: Maximum number of results to return (default: 50)
 
-        return location
+        Returns:
+            List of Location objects sorted by distance
+        """
+        point = Point(float(lng), float(lat), srid=4326)
 
-    @staticmethod
-    def get_nearby_locations(latitude, longitude, radius_km=10, limit=20):
-        """Find locations near a point with optimized spatial indexing."""
-        # Create a point from coordinates
-        user_location = Point(longitude, latitude, srid=4326)
+        cache_key = f"nearby:{lat:.4f},{lng:.4f}:{radius_km}:{limit}"
+        cached = cache.get(cache_key)
+        if cached:
+            return cached
 
-        # Use ST_DWithin for better index usage (more efficient than distance calculations)
-        locations = (
-            Location.objects.filter(point__dwithin=(user_location, D(km=radius_km)))
-            .annotate(distance=Distance("point", user_location))
+        qs = (
+            Location.objects
+            .filter(coordinates__dwithin=(point, D(km=radius_km)))
+            .annotate(distance=Distance("coordinates", point))
             .order_by("distance")[:limit]
         )
 
-        return locations
+        results = list(qs)
+        cache.set(cache_key, results, 3600)
+        return results
 
     @staticmethod
-    def get_popular_cities(country=None, limit=10):
-        """Get most common cities in the database."""
-        cache_key = f"popular_cities:{country or 'all'}:{limit}"
-        result = cache.get(cache_key)
+    def get_deals_summary_for_locations(location_qs):
+        """
+        Annotate locations with their related deal counts.
 
-        if not result:
-            queryset = Location.objects.values("city", "country")
-            if country:
-                queryset = queryset.filter(country__iexact=country)
+        Args:
+            location_qs: A queryset of Location objects
 
-            result = list(
-                queryset.annotate(count=Count("id")).order_by("-count")[:limit]
+        Returns:
+            The queryset annotated with deal_count
+        """
+        return location_qs.annotate(
+            deal_count=Count(
+                "shop__deals", 
+                filter=Q(shop__deals__is_verified=True)
             )
-
-            cache.set(cache_key, result, 3600)  # Cache for 1 hour
-
-        return result
-
-    @staticmethod
-    def create_or_update_location(
-        address, city, state, country, postal_code, latitude, longitude
-    ):
-        """Efficiently create or update a location record."""
-        point = Point(float(longitude), float(latitude), srid=4326)
-
-        # Try to find existing location first
-        location, created = Location.objects.update_or_create(
-            address=address,
-            city=city,
-            country=country,
-            defaults={"state": state, "postal_code": postal_code, "point": point},
         )
 
-        # Clear relevant caches
-        cache.delete_pattern(f"popular_cities:*")
-        cache.delete_pattern(f"locations_in_city:{city.lower()}:*")
-
-        return location
-
     @staticmethod
-    def get_location_stats():
-        """Get quick statistics about locations."""
-        cache_key = "location_stats"
-        stats = cache.get(cache_key)
+    def geocode_address(address):
+        """
+        Convert an address string to a geospatial Point.
 
-        if not stats:
-            stats = {
-                "total_locations": Location.objects.count(),
-                "countries_count": Location.objects.values("country")
-                .distinct()
-                .count(),
-                "cities_count": Location.objects.values("city", "country")
-                .distinct()
-                .count(),
-                "top_countries": list(
-                    Location.objects.values("country")
-                    .annotate(count=Count("id"))
-                    .order_by("-count")[:5]
-                ),
-            }
+        Args:
+            address: String address to geocode
 
-            cache.set(cache_key, stats, 3600)  # Cache for 1 hour
-
-        return stats
+        Returns:
+            Point object or None if geocoding fails
+        """
+        try:
+            lat, lng = external_geocode_api(address)
+            if lat and lng:
+                return Point(float(lng), float(lat), srid=4326)
+        except Exception:
+            pass
+        return None

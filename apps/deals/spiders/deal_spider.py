@@ -1,19 +1,28 @@
+import re
 import logging
-
 import scrapy
+from dateutil import parser
 from django.contrib.gis.geos import Point
 from django.utils import timezone
 
+from apps.shops.models import Shop
+from apps.deals.models import Deal
 from apps.categories.models import Category
-from apps.deals.models import Deal, Shop
+from apps.locations.models import Location
 
 logger = logging.getLogger("dealopia.scrapers")
 
 
 class SustainableDealSpider(scrapy.Spider):
-    """Spider for scraping sustainable deals from configured shops."""
+    """
+    Spider for scraping sustainable deals from configured shops.
+    Uses eco_keywords to filter sustainable items and avoids those with
+    unsustainable_keywords.
+    """
 
     name = "sustainable_deal_spider"
+
+    # Custom settings for this spider
     custom_settings = {
         "ROBOTSTXT_OBEY": True,
         "DOWNLOAD_DELAY": 3,  # More respectful crawling
@@ -26,37 +35,26 @@ class SustainableDealSpider(scrapy.Spider):
         super().__init__(*args, **kwargs)
         # Keywords to identify sustainable products
         self.eco_keywords = [
-            "sustainable",
-            "eco",
-            "green",
-            "organic",
-            "fair trade",
-            "recycled",
-            "upcycled",
-            "second hand",
-            "refurbished",
-            "local",
-            "carbon neutral",
-            "eco-friendly",
-            "biodegradable",
+            "sustainable", "eco", "green", "organic", "fair trade",
+            "recycled", "upcycled", "second hand", "refurbished", "local",
+            "carbon neutral", "eco-friendly", "biodegradable",
         ]
 
         # Keywords to identify potentially unsustainable products
         self.unsustainable_keywords = [
-            "fast fashion",
-            "single-use",
-            "disposable",
-            "non-recyclable",
+            "fast fashion", "single-use", "disposable", "non-recyclable",
         ]
 
     def start_requests(self):
-        """Get scraping URLs from verified sustainable shops."""
-        # Only scrape from verified shops with scraping URLs
+        """
+        Grab scraping URLs from verified shops in the database.
+        Only shops with 'scrape_url' and 'is_verified=True' are considered.
+        """
         shops = Shop.objects.filter(is_verified=True, scrape_url__isnull=False).only(
             "id", "scrape_url", "deal_selector", "location"
         )
 
-        if not shops:
+        if not shops.exists():
             logger.warning("No shops configured for scraping")
             return
 
@@ -78,11 +76,14 @@ class SustainableDealSpider(scrapy.Spider):
             )
 
     def parse_deals(self, response):
-        """Parse deals from shop pages with sustainability filtering."""
+        """
+        Parse deals from the specified selector, apply sustainability filtering,
+        and yield results.
+        """
         shop_id = response.meta["shop_id"]
         shop_name = response.meta["shop_name"]
 
-        # Get custom selector if specified, otherwise use defaults
+        # Fallback selector if shop.deal_selector is not defined
         deal_selector = (
             response.meta.get("deal_selector")
             or ".product, .deal, .offer, [data-product]"
@@ -95,7 +96,7 @@ class SustainableDealSpider(scrapy.Spider):
         for item in response.css(deal_selector):
             deals_found += 1
 
-            # Extract deal data with fallbacks for different site structures
+            # Extract core text fields
             title = self.extract_text(item, "h2, h3, .title, .product-title")
             description = self.extract_text(
                 item, ".description, .short-desc, .product-desc"
@@ -105,56 +106,48 @@ class SustainableDealSpider(scrapy.Spider):
             if not title:
                 continue
 
-            # Check if product has sustainable indicators
+            # Check for sustainability indicators
             is_sustainable = self.check_sustainability(title, description)
-
             if not is_sustainable:
                 continue
-
             sustainable_deals += 1
 
-            # Extract price information with thorough fallbacks
+            # Extract pricing
             original_price = self.extract_price(
-                item, ".original-price, .regular-price, .old-price, del, s, .was-price"
+                item, ".original-price, .regular-price, .old-price, del, s, "
+                ".was-price"
             )
-
             discounted_price = self.extract_price(
                 item,
-                ".sale-price, .discounted-price, .current-price, .special-price, .price:not(del):not(s)",
+                ".sale-price, .discounted-price, .current-price, .special-price, "
+                ".price:not(del):not(s)",
             )
 
-            # Skip if no valid price data
-            if (
-                not original_price
-                or not discounted_price
-                or discounted_price >= original_price
-            ):
+            # Skip if price data is invalid or no discount
+            if (not original_price or not discounted_price or 
+                    discounted_price >= original_price):
                 continue
 
-            # Calculate discount
             discount_percentage = int(
                 ((original_price - discounted_price) / original_price) * 100
             )
 
-            # Get image URL
+            # Attempt to find an image URL
             image_url = self.extract_attribute(item, "img", "src, data-src")
             if not image_url and item.css("img"):
-                # Try to extract from style attribute for background images
+                # Attempt from style attribute (background-image, etc.)
                 style = item.css("img::attr(style)").get()
                 if style and "url(" in style:
-                    import re
-
                     match = re.search(r'url\([\'"]?([^\'"]+)[\'"]?\)', style)
                     if match:
                         image_url = match.group(1)
 
-            # Get product URL
+            # Attempt to find product URL
             product_url = self.extract_attribute(item, "a", "href")
 
             # Ensure absolute URLs
             if image_url and not image_url.startswith(("http://", "https://")):
                 image_url = response.urljoin(image_url)
-
             if product_url and not product_url.startswith(("http://", "https://")):
                 product_url = response.urljoin(product_url)
 
@@ -164,31 +157,28 @@ class SustainableDealSpider(scrapy.Spider):
                 "time, .expiry, .expires-on, [data-expiry]",
                 "datetime, data-date, content",
             )
-
-            # Default to 30 days from now
+            # Default to 30 days
             expiration = timezone.now() + timezone.timedelta(days=30)
-
-            # Try to parse expiration date
             if expiration_str:
                 try:
-                    from dateutil import parser
-
                     parsed_date = parser.parse(expiration_str)
                     if parsed_date > timezone.now():
                         expiration = parsed_date
-                except:
+                except Exception:
                     pass
 
             try:
                 shop = Shop.objects.get(id=shop_id)
 
-                # Location data
-                if shop.location and shop.location.point:
-                    location = Point(shop.location.point.x, shop.location.point.y)
-                else:
-                    location = None
+                # If the shop has a location
+                location = None
+                if shop.location and shop.location.coordinates:
+                    location = Point(
+                        shop.location.coordinates.x,
+                        shop.location.coordinates.y
+                    )
 
-                # Sustainability score
+                # Score for sustainability
                 sustainability_score = self.calculate_sustainability_score(
                     title, description
                 )
@@ -213,11 +203,15 @@ class SustainableDealSpider(scrapy.Spider):
                 logger.error(f"Error processing deal from {shop_name}: {str(e)}")
 
         logger.info(
-            f"Scraped {shop_name}: Found {deals_found} deals, {sustainable_deals} sustainable"
+            f"Scraped {shop_name}: Found {deals_found} deals, "
+            f"{sustainable_deals} considered sustainable"
         )
 
     def extract_text(self, selector, css_path):
-        """Extract text with fallbacks for multiple potential selectors."""
+        """
+        Extract text from a set of CSS selectors,
+        returning the first match that yields a non-empty string.
+        """
         for path in css_path.split(","):
             text = selector.css(f"{path.strip()}::text").get()
             if text:
@@ -225,27 +219,33 @@ class SustainableDealSpider(scrapy.Spider):
         return None
 
     def extract_attribute(self, selector, element, attributes):
-        """Extract attribute with fallbacks for multiple attributes."""
+        """
+        Extract an attribute from the first element that exists,
+        trying multiple attribute names in `attributes`.
+        """
         for attribute in attributes.split(","):
-            attr = selector.css(f"{element.strip()}::attr({attribute.strip()})").get()
+            attr = selector.css(
+                f"{element.strip()}::attr({attribute.strip()})"
+            ).get()
             if attr:
                 return attr.strip()
         return None
 
     def extract_price(self, selector, css_path):
-        """Extract and parse price with proper number handling."""
+        """
+        Extract price by removing currency symbols and parsing as float.
+        Handles either '.' or ',' decimal separators.
+        """
         raw_price = self.extract_text(selector, css_path)
         if not raw_price:
             return None
 
-        # Remove currency symbols and non-numeric characters except decimal separator
-        import re
-
+        # Remove currency symbols and keep only digits/decimals
         price_str = re.sub(r"[^\d.,]", "", raw_price)
 
-        # Handle different decimal separators
+        # Handle possible decimal formats
         if "," in price_str and "." in price_str:
-            # If both present, the last one is the decimal separator
+            # If both '.' and ',' appear, assume the last occurrence is the decimal
             if price_str.rindex(",") > price_str.rindex("."):
                 price_str = price_str.replace(".", "")
                 price_str = price_str.replace(",", ".")
@@ -257,61 +257,59 @@ class SustainableDealSpider(scrapy.Spider):
 
         try:
             return float(price_str)
-        except:
+        except ValueError:
             return None
 
     def check_sustainability(self, title, description):
-        """Check if a product is sustainable based on its title and description."""
+        """
+        Determine if an item is "sustainable" by searching for eco_keywords
+        and making sure none of the unsustainable_keywords appear.
+        """
         if not title:
             return False
-
         text = f"{title} {description or ''}".lower()
 
-        # Quick check for unsustainable indicators
+        # Quick check for unsustainable indicators => auto-fail
         for keyword in self.unsustainable_keywords:
             if keyword in text:
                 return False
 
-        # Check for sustainable indicators
+        # If at least one eco_keyword is present => pass
         return any(keyword in text for keyword in self.eco_keywords)
 
     def calculate_sustainability_score(self, title, description):
-        """Calculate basic sustainability score based on keyword presence."""
+        """
+        Calculate sustainability score based on keywords.
+        Score starts at 5, adds 0.5 per eco keyword, subtracts 1 per unsustainable.
+        Clamped between 0 and 10.
+        """
         if not title:
-            return 5.0  # Default medium score
+            return 5.0  # default medium
 
         text = f"{title} {description or ''}".lower()
-
-        # Start with medium score
         score = 5.0
 
-        # Count sustainable keywords
-        eco_count = sum(keyword in text for keyword in self.eco_keywords)
-
-        # Adjust score based on keywords (max +3.0)
+        eco_count = sum(kw in text for kw in self.eco_keywords)
         score += min(eco_count * 0.5, 3.0)
 
-        # Penalize for unsustainable keywords
-        unsustainable_count = sum(
-            keyword in text for keyword in self.unsustainable_keywords
-        )
-        score -= unsustainable_count * 1.0
+        bad_count = sum(kw in text for kw in self.unsustainable_keywords)
+        score -= bad_count * 1.0
 
-        # Ensure score is within bounds
         return max(min(score, 10.0), 0.0)
 
     def handle_error(self, failure):
-        """Handle request errors gracefully."""
+        """
+        Handle scraping errors gracefully, logging them
+        and possibly updating the Shop model with error info.
+        """
         shop_id = failure.request.meta.get("shop_id")
         shop_name = failure.request.meta.get("shop_name", "Unknown")
 
         logger.error(f"Error scraping {shop_name} (ID: {shop_id}): {repr(failure)}")
 
-        # Log the error and update shop scraping status if needed
         try:
             if shop_id:
                 shop = Shop.objects.get(id=shop_id)
-                # Potentially update shop metadata to track scraping failures
                 shop.last_scrape_error = str(failure)
                 shop.last_scrape_attempt = timezone.now()
                 shop.save(update_fields=["last_scrape_error", "last_scrape_attempt"])

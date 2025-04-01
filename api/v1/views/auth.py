@@ -16,10 +16,8 @@ from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
-from rest_framework_simplejwt.token_blacklist.models import (
-    BlacklistedToken,
-    OutstandingToken,
-)
+from rest_framework_simplejwt.token_blacklist.models import (BlacklistedToken,
+                                                             OutstandingToken)
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
@@ -96,9 +94,15 @@ class TwoFactorVerifyView(APIView):
             }
         },
         responses={
-            200: OpenApiResponse(description="Successfully verified, returns JWT tokens"),
-            400: OpenApiResponse(description="Invalid verification code or missing data"),
-            404: OpenApiResponse(description="User not found or no 2FA device configured"),
+            200: OpenApiResponse(
+                description="Successfully verified, returns JWT tokens"
+            ),
+            400: OpenApiResponse(
+                description="Invalid verification code or missing data"
+            ),
+            404: OpenApiResponse(
+                description="User not found or no 2FA device configured"
+            ),
         },
     )
     def post(self, request, *args, **kwargs):
@@ -106,19 +110,25 @@ class TwoFactorVerifyView(APIView):
         token = request.data.get("token")
 
         if not user_id or not token:
-            return create_error_response("Both user_id and token are required", status.HTTP_400_BAD_REQUEST)
+            return create_error_response(
+                "Both user_id and token are required", status.HTTP_400_BAD_REQUEST
+            )
 
         user = get_user_or_404(user_id)
         if not user:
             return create_error_response("User not found", status.HTTP_404_NOT_FOUND)
-        
+
         try:
             device = TOTPDevice.objects.get(user=user, confirmed=True)
         except TOTPDevice.DoesNotExist:
-            return create_error_response("No 2FA device configured for this user", status.HTTP_404_NOT_FOUND)
+            return create_error_response(
+                "No 2FA device configured for this user", status.HTTP_404_NOT_FOUND
+            )
 
         if not device.verify_token(token):
-            return create_error_response("Invalid verification code", status.HTTP_400_BAD_REQUEST)
+            return create_error_response(
+                "Invalid verification code", status.HTTP_400_BAD_REQUEST
+            )
 
         # Record successful 2FA login
         user.last_login = timezone.now()
@@ -149,7 +159,10 @@ class TwoFactorSetupView(APIView):
         user = request.user
 
         if TOTPDevice.objects.filter(user=user, confirmed=True).exists():
-            return create_error_response("Two-factor authentication is already enabled", status.HTTP_400_BAD_REQUEST)
+            return create_error_response(
+                "Two-factor authentication is already enabled",
+                status.HTTP_400_BAD_REQUEST,
+            )
 
         device, created = TOTPDevice.objects.get_or_create(
             user=user, confirmed=False, defaults={"name": f"{user.email}'s device"}
@@ -202,19 +215,25 @@ class TwoFactorSetupView(APIView):
     def post(self, request, *args, **kwargs):
         token = request.data.get("token")
         if not token:
-            return create_error_response("Verification code is required", status.HTTP_400_BAD_REQUEST)
+            return create_error_response(
+                "Verification code is required", status.HTTP_400_BAD_REQUEST
+            )
 
         try:
             device = TOTPDevice.objects.get(user=request.user, confirmed=False)
         except TOTPDevice.DoesNotExist:
-            return create_error_response("No pending two-factor setup found", status.HTTP_404_NOT_FOUND)
+            return create_error_response(
+                "No pending two-factor setup found", status.HTTP_404_NOT_FOUND
+            )
 
         if not device.verify_token(token):
-            return create_error_response("Invalid verification code", status.HTTP_400_BAD_REQUEST)
-        
+            return create_error_response(
+                "Invalid verification code", status.HTTP_400_BAD_REQUEST
+            )
+
         device.confirmed = True
         device.save()
-        
+
         return create_success_response(
             message="Two-factor authentication has been enabled successfully"
         )
@@ -241,27 +260,33 @@ class TwoFactorDisableView(APIView):
         },
         responses={
             200: OpenApiResponse(description="2FA successfully disabled"),
-            400: OpenApiResponse(description="Invalid password or missing confirmation"),
+            400: OpenApiResponse(
+                description="Invalid password or missing confirmation"
+            ),
             404: OpenApiResponse(description="User has no 2FA enabled"),
         },
     )
     def post(self, request, *args, **kwargs):
         password = request.data.get("password")
         if not password:
-            return create_error_response("Password confirmation is required", status.HTTP_400_BAD_REQUEST)
+            return create_error_response(
+                "Password confirmation is required", status.HTTP_400_BAD_REQUEST
+            )
 
         if not request.user.check_password(password):
-            return create_error_response("Invalid password", status.HTTP_400_BAD_REQUEST)
+            return create_error_response(
+                "Invalid password", status.HTTP_400_BAD_REQUEST
+            )
 
         devices = TOTPDevice.objects.filter(user=request.user)
         if not devices.exists():
             return create_error_response(
-                "Two-factor authentication is not enabled for this user", 
-                status.HTTP_404_NOT_FOUND
+                "Two-factor authentication is not enabled for this user",
+                status.HTTP_404_NOT_FOUND,
             )
 
         devices.delete()
-        
+
         return create_success_response(
             message="Two-factor authentication has been disabled successfully"
         )
@@ -275,7 +300,9 @@ class SessionInfoView(APIView):
     @extend_schema(
         description="Get information about the current authenticated session",
         responses={
-            200: OpenApiResponse(description="Returns session details including 2FA status"),
+            200: OpenApiResponse(
+                description="Returns session details including 2FA status"
+            ),
         },
     )
     def get(self, request, *args, **kwargs):
@@ -331,10 +358,14 @@ class LogoutView(APIView):
 
         # Clear all cookies that might be storing auth state
         auth_cookies = [
-            "sessionid", "csrftoken", "refresh_token", 
-            "access_token", "auth-token", "refresh-token"
+            "sessionid",
+            "csrftoken",
+            "refresh_token",
+            "access_token",
+            "auth-token",
+            "refresh-token",
         ]
-        
+
         for cookie_name in auth_cookies:
             response.delete_cookie(
                 cookie_name,
@@ -372,7 +403,9 @@ class TokenRefreshRateLimitedView(APIView):
         refresh_token = request.data.get("refresh")
 
         if not refresh_token:
-            return create_error_response("Refresh token is required", status.HTTP_400_BAD_REQUEST)
+            return create_error_response(
+                "Refresh token is required", status.HTTP_400_BAD_REQUEST
+            )
 
         try:
             refresh = RefreshToken(refresh_token)
@@ -380,12 +413,16 @@ class TokenRefreshRateLimitedView(APIView):
             user = User.objects.get(id=user_id)
 
             if not user.is_active:
-                return create_error_response("User account is disabled", status.HTTP_401_UNAUTHORIZED)
+                return create_error_response(
+                    "User account is disabled", status.HTTP_401_UNAUTHORIZED
+                )
 
             return Response({"access": str(refresh.access_token)})
 
         except (TokenError, User.DoesNotExist):
-            return create_error_response("Invalid or expired refresh token", status.HTTP_401_UNAUTHORIZED)
+            return create_error_response(
+                "Invalid or expired refresh token", status.HTTP_401_UNAUTHORIZED
+            )
 
 
 class SocialAuthCallbackView(APIView):
@@ -395,7 +432,9 @@ class SocialAuthCallbackView(APIView):
 
     def get(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
-            return create_error_response("Authentication failed", status.HTTP_401_UNAUTHORIZED)
+            return create_error_response(
+                "Authentication failed", status.HTTP_401_UNAUTHORIZED
+            )
 
         refresh = RefreshToken.for_user(request.user)
         redirect_url = f"{settings.FRONTEND_URL}/auth/callback?access={str(refresh.access_token)}&refresh={str(refresh)}"

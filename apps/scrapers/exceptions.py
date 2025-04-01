@@ -1,9 +1,10 @@
 from scrapy.exceptions import NotConfigured
 from sentry_sdk import capture_exception
 
-
 class SentryLoggerExtension:
-    """Extension to capture exceptions in Scrapy spiders and report to Sentry."""
+    """
+    Extension to capture exceptions in Scrapy spiders and report to Sentry.
+    """
 
     def __init__(self, sentry_dsn):
         self.sentry_dsn = sentry_dsn

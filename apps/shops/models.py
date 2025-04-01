@@ -26,10 +26,9 @@ class Shop(models.Model):
     )
     description = models.TextField(_("Description"))
     short_description = models.CharField(_("Short Description"), max_length=255)
-    logo = models.ImageField(_("Logo"), upload_to="shop_logos/")
-    banner_image = models.ImageField(
-        _("Banner Image"), upload_to="shop_banners/", blank=True
-    )
+    logo = models.ImageField(_("Logo"), upload_to="shop_logos/", blank=True, null=True)
+    banner_image = models.ImageField(_("Banner Image"), upload_to="shop_banners/", blank=True, null=True)
+    
     website = models.URLField(_("Website"), blank=True)
     phone = models.CharField(_("Phone"), max_length=15, blank=True)
     email = models.EmailField(_("Email"))
@@ -107,3 +106,19 @@ class Shop(models.Model):
         self.rating = round(avg_rating, 2)
         self.save(update_fields=["rating"])
         return self.rating
+
+
+class Review(models.Model):
+    shop = models.ForeignKey(
+        Shop,
+        on_delete=models.CASCADE,
+        related_name="reviews"
+    )
+    user = models.ForeignKey("accounts.User", on_delete=models.SET_NULL, null=True, blank=True)
+    rating = models.DecimalField(max_digits=3, decimal_places=1, default=5.0)
+    is_approved = models.BooleanField(default=False)
+    comment = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Review of {self.shop.name} by {self.user or 'Anonymous'}"

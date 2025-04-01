@@ -1,25 +1,63 @@
+"""
+Celery tasks for the deals app.
+"""
 import logging
+from datetime import timedelta
+from typing import Dict, List, Optional, Union, Any
 
 from celery import shared_task
-from django.db.models import Q
 from django.utils import timezone
+from scrapy.crawler import CrawlerProcess
+from scrapy.utils.project import get_project_settings
 
 from apps.deals.models import Deal
-from apps.shops.models import Shop
+from apps.deals.services import DealService
+from apps.accounts.models import User
+from apps.scrapers.api_services import EcoRetailerAPI
 
-logger = logging.getLogger("dealopia.tasks")
+logger = logging.getLogger(__name__)
 
 
 @shared_task
-def import_deals_from_apis():
-    """Task to import deals from all configured eco-friendly APIs."""
-    from apps.deals.services import DealImportService
+def clean_expired_deals(days: int = 30) -> Dict[str, int]:
+    """
+    Remove deals that have been expired for more than the specified number of days.
+    
+    Args:
+        days: Number of days after expiration to keep deals
+        
+    Returns:
+        Dictionary with count of deleted deals
+    """
+    cutoff_date = timezone.now() - timedelta(days=days)
+    
+    # Find deals that have been expired for longer than the cutoff
+    expired_deals = Deal.objects.filter(
+        end_date__lt=cutoff_date
+    )
+    
+    count = expired_deals.count()
+    expired_deals.delete()
+    
+    logger.info(f"Deleted {count} deals expired for more than {days} days")
+    
+    return {"deleted": count}
+
+
+@shared_task
+def import_deals_from_apis() -> Dict[str, Any]:
+    """
+    Task to import deals from all configured eco-friendly APIs.
+   
+    Returns:
+        dict: Results dictionary containing counts of created/updated deals
+              and any failed sources.
+    """
+    from apps.scrapers.services import DealImportService
 
     total_results = {"total_created": 0, "total_updated": 0, "failed_sources": []}
 
     # Get all the API sources we support
-    from apps.deals.services import EcoRetailerAPI
-
     api_sources = EcoRetailerAPI.SOURCES.keys()
 
     for source in api_sources:
@@ -31,11 +69,15 @@ def import_deals_from_apis():
                 total_results["total_created"] += result.get("created", 0)
                 total_results["total_updated"] += result.get("updated", 0)
                 logger.info(
-                    f"Successfully imported from {source}: {result.get('created', 0)} created, {result.get('updated', 0)} updated"
+                    f"Successfully imported from {source}: "
+                    f"{result.get('created', 0)} created, "
+                    f"{result.get('updated', 0)} updated"
                 )
             else:
                 total_results["failed_sources"].append(source)
-                logger.error(f"Failed to import from {source}: {result.get('error')}")
+                logger.error(
+                    f"Failed to import from {source}: {result.get('error')}"
+                )
 
         except Exception as e:
             total_results["failed_sources"].append(source)
@@ -45,111 +87,113 @@ def import_deals_from_apis():
 
 
 @shared_task
-def scrape_sustainable_deals():
-    """Task to scrape deals from configured shops."""
-    from scrapy.crawler import CrawlerProcess
-    from scrapy.utils.project import get_project_settings
-
-    from apps.deals.spiders.sustainable_deal_spider import \
-        SustainableDealSpider
-
+def scrape_sustainable_deals() -> Dict[str, Any]:
+    """
+    Task to scrape deals from sustainable shopping sites.
+    
+    Returns:
+        Dictionary with success status and results
+    """
     try:
+        from apps.deals.spiders.deal_spider import SustainableDealSpider
+        
+        # Configure Scrapy crawler
         process = CrawlerProcess(get_project_settings())
+        
+        # Add the spider to the process
         process.crawl(SustainableDealSpider)
-        process.start()  # Blocks until crawling is finished
-
-        return {"success": True, "message": "Scraping completed successfully"}
+        
+        # Start the crawler process
+        process.start()
+        
+        # Return success
+        return {
+            "success": True, 
+            "message": "Scraping completed successfully"
+        }
+    
     except Exception as e:
-        logger.exception(f"Error during scraping: {str(e)}")
-        return {"success": False, "error": str(e)}
+        logger.exception(f"Error running sustainable deals spider: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
 
 @shared_task
-def update_sustainability_scores():
-    """Update sustainability scores for all active deals."""
-    updated_count = 0
-    error_count = 0
-
-    # Get active deals without a good sustainability score
-    deals = Deal.get_active().filter(
-        Q(sustainability_score__lt=7.0) | Q(sustainability_score__isnull=True)
-    )
-
-    logger.info(f"Updating sustainability scores for {deals.count()} deals")
-
-    for deal in deals.iterator(chunk_size=100):
+def update_sustainability_scores() -> Dict[str, int]:
+    """
+    Update sustainability scores for all deals.
+    
+    Returns:
+        Dictionary with counts of updates and errors
+    """
+    deals = Deal.objects.all()
+    updated = 0
+    errors = 0
+    
+    for deal in deals:
         try:
             deal.calculate_sustainability_score()
-            updated_count += 1
+            updated += 1
         except Exception as e:
-            error_count += 1
-            logger.error(
-                f"Error updating sustainability score for deal {deal.id}: {str(e)}"
-            )
-
+            logger.error(f"Error updating sustainability score for deal {deal.id}: {str(e)}")
+            errors += 1
+    
     return {
-        "updated": updated_count,
-        "errors": error_count,
-        "total": updated_count + error_count,
+        "updated": updated,
+        "errors": errors,
+        "total": updated + errors
     }
 
 
 @shared_task
-def clean_expired_deals(days=30):
-    """Clean up expired deals older than the specified days."""
-    cutoff_date = timezone.now() - timezone.timedelta(days=days)
-
-    expired_deals = Deal.objects.filter(end_date__lt=cutoff_date)
-
-    count = expired_deals.count()
-    expired_deals.delete()
-
-    logger.info(f"Deleted {count} expired deals older than {days} days")
-
-    return {"deleted": count}
-
-
-@shared_task
-def send_deal_notifications(deal_id):
-    """Send notifications to users about a new deal.
-
-    Notifies users who have subscribed to deal categories or shops,
-    or who are in the vicinity of the deal's location.
-
-    Args:
-        deal_id (int): The ID of the newly created deal
-
-    Returns:
-        dict: Results of the notification process
+def send_deal_notifications(deal_id: int) -> Dict[str, Any]:
     """
-    from apps.deals.models import Deal
-
+    Send notifications for a newly created or updated deal.
+    
+    Args:
+        deal_id: ID of the deal to send notifications for
+        
+    Returns:
+        Dictionary with success status
+    """
     try:
-        deal = (
-            Deal.objects.select_related("shop")
-            .prefetch_related("categories")
-            .get(id=deal_id)
-        )
-
-        logger.info(f"Sending notifications for new deal: {deal.title} (ID: {deal_id})")
-
-        # Example notification logic - implement based on your notification system
-        # notify_users_by_category(deal)
-        # notify_users_by_shop(deal)
-        # notify_nearby_users(deal)
-
-        # For now, just log that we would send notifications
-        logger.info(f"Would notify users about: {deal.title} at {deal.shop.name}")
-
+        deal = Deal.objects.get(id=deal_id)
+        
+        # Find users who should receive notifications about this deal
+        # This could be based on user preferences, location, etc.
+        relevant_users = User.objects.filter(
+            # Users who have favorited relevant categories
+            favorite_categories__in=deal.categories.all()
+        ).distinct()
+        
+        if not relevant_users.exists():
+            logger.info(f"No users to notify about deal {deal.id}: {deal.title}")
+            return {
+                "success": True,
+                "deal_id": deal_id,
+                "notifications_sent": 0
+            }
+        
+        # In a real implementation, this would send emails, push notifications, etc.
+        logger.info(f"Would notify {relevant_users.count()} users about new deal: {deal.title}")
+        
         return {
             "success": True,
             "deal_id": deal_id,
-            "notifications_sent": 0,  # Update with actual count when implemented
+            "notifications_sent": relevant_users.count()
         }
-
+        
     except Deal.DoesNotExist:
-        logger.error(f"Cannot send notifications: Deal {deal_id} not found")
-        return {"success": False, "error": f"Deal {deal_id} not found"}
+        logger.error(f"Deal {deal_id} not found - cannot send notifications")
+        return {
+            "success": False,
+            "error": f"Deal {deal_id} not found"
+        }
     except Exception as e:
-        logger.exception(f"Error sending notifications for deal {deal_id}: {str(e)}")
-        return {"success": False, "error": str(e)}
+        logger.error(f"Error sending notifications for deal {deal_id}: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e)
+        }

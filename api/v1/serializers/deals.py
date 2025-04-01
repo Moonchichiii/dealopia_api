@@ -19,48 +19,59 @@ class DealListSerializer(serializers.ModelSerializer):
     discount_amount = serializers.DecimalField(
         max_digits=10, decimal_places=2, read_only=True
     )
-    time_left_days = serializers.SerializerMethodField()
+    time_left = serializers.SerializerMethodField()
     is_eco_friendly = serializers.SerializerMethodField()
     distance = serializers.SerializerMethodField()
 
     class Meta:
         model = Deal
         fields = [
-            "id", "title", "shop", "shop_name", "shop_logo",
-            "original_price", "discounted_price", "discount_percentage", 
-            "discount_amount", "categories", "category_names", "image",
-            "start_date", "end_date", "is_featured", "is_exclusive", 
-            "is_verified", "time_left_days", "is_eco_friendly",
-            "sustainability_score", "local_production", "coupon_code", 
+            "id",
+            "title",
+            "shop",
+            "shop_name",
+            "shop_logo",
+            "original_price",
+            "discounted_price",
+            "discount_percentage",
+            "discount_amount",
+            "categories",
+            "category_names",
+            "image",
+            "start_date",
+            "end_date",
+            "is_featured",
+            "is_exclusive",
+            "is_verified",
+            "time_left",
+            "is_eco_friendly",
+            "sustainability_score",
+            "local_production",
+            "coupon_code",
             "distance",
         ]
         read_only_fields = [
-            "id", "discount_amount", "time_left_days", 
-            "is_eco_friendly", "distance",
+            "id",
+            "discount_amount",
+            "time_left",
+            "is_eco_friendly",
+            "distance",
         ]
 
     def get_shop_logo(self, obj):
         return obj.shop.logo.url if obj.shop.logo else None
 
-    def get_time_left_days(self, obj):
-        if not obj.end_date:
-            return None
-
+    def get_time_left(self, obj):
         now = timezone.now()
         if now > obj.end_date:
             return "Expired"
-
-        time_left = obj.end_date - now
-        days = time_left.days
-
-        if days > 0:
-            return f"{days} days"
-
-        hours = time_left.seconds // 3600
+        delta = obj.end_date - now
+        if delta.days > 0:
+            return f"{delta.days} days"
+        hours = delta.seconds // 3600
         if hours > 0:
             return f"{hours} hours"
-
-        minutes = (time_left.seconds % 3600) // 60
+        minutes = (delta.seconds % 3600) // 60
         return f"{minutes} minutes"
 
     def get_is_eco_friendly(self, obj):
@@ -88,15 +99,11 @@ class DealSerializer(DealListSerializer):
                 raise serializers.ValidationError(
                     "Discounted price must be lower than the original price"
                 )
-
         if "start_date" in data and "end_date" in data:
             if data["start_date"] >= data["end_date"]:
                 raise serializers.ValidationError("End date must be after start date")
-
             if data["end_date"] < timezone.now():
                 raise serializers.ValidationError("End date cannot be in the past")
-
-        # Auto-calculate discount percentage
         if (
             "original_price" in data
             and "discounted_price" in data
@@ -109,8 +116,9 @@ class DealSerializer(DealListSerializer):
                 ) * 100
                 data["discount_percentage"] = round(discount)
             except (ZeroDivisionError, decimal.InvalidOperation):
-                raise serializers.ValidationError("Invalid price values for discount calculation")
-
+                raise serializers.ValidationError(
+                    "Invalid price values for discount calculation"
+                )
         return data
 
 
@@ -122,9 +130,17 @@ class DealDetailSerializer(DealSerializer):
 
     class Meta(DealSerializer.Meta):
         fields = DealSerializer.Meta.fields + [
-            "description", "terms_and_conditions", "redemption_link",
-            "views_count", "clicks_count", "created_at", "updated_at",
-            "similar_deals", "eco_certifications", "carbon_footprint", "source",
+            "description",
+            "terms_and_conditions",
+            "redemption_link",
+            "views_count",
+            "clicks_count",
+            "created_at",
+            "updated_at",
+            "similar_deals",
+            "eco_certifications",
+            "carbon_footprint",
+            "source",
         ]
 
     def get_similar_deals(self, obj):

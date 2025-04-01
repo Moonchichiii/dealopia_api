@@ -1,3 +1,6 @@
+"""
+API services for integrating with external deal providers.
+"""
 import json
 import logging
 from datetime import timedelta
@@ -119,8 +122,8 @@ class GoodOnYouAPIService(BaseAPIService):
         return cls.make_request(f"/brands/{brand_id}")
 
     @classmethod
-    def sync_sustainable_brands(cls, limit=100):
-        """Sync sustainable brands with our database"""
+    def sync_deals(cls, limit=100):
+        """Sync sustainable brands and their deals with our database"""
         response = cls.make_request("/brands", params={"min_rating": 4, "limit": limit})
 
         brands = response.get("brands", [])
@@ -133,7 +136,6 @@ class GoodOnYouAPIService(BaseAPIService):
             defaults={
                 "name": "Sustainable Fashion",
                 "description": "Ethical and sustainable fashion brands and products",
-                "icon": "leaf",
                 "is_active": True,
             },
         )
@@ -224,7 +226,7 @@ class HotUKDealsAPIService(BaseAPIService):
         return response.get("deals", [])
 
     @classmethod
-    def sync_uk_deals(cls, limit=100):
+    def sync_deals(cls, limit=100):
         """Sync deals from HotUKDeals with our database"""
         deals_data = cls.get_hot_deals(limit=limit)
 
@@ -307,19 +309,18 @@ class HotUKDealsAPIService(BaseAPIService):
         }
 
 
-class APIServiceFactory:
-    """Factory for creating API service instances"""
-
-    @staticmethod
-    def get_service(service_name):
-        """Get an API service by name"""
-        services = {
-            "good_on_you": GoodOnYouAPIService,
-            "hotukdeals": HotUKDealsAPIService,
-        }
-
-        service = services.get(service_name.lower())
-        if not service:
-            raise ServiceError(f"Unknown API service: {service_name}")
-
-        return service
+class EcoRetailerAPI:
+    """Configuration for eco-friendly retailer APIs"""
+    
+    SOURCES = {
+        "open_food_facts": {
+            "url": "https://world.openfoodfacts.org",
+            "key_setting": None,
+            "is_sustainable": True,
+        },
+        "open_apparel_registry": {
+            "url": "https://api.openapparel.org",
+            "key_setting": None,
+            "is_sustainable": True,
+        },
+    }

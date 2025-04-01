@@ -11,6 +11,8 @@ django-otp
 
 # Admin Interface
 wagtail
+wagtailmedia
+wagtail-generic-chooser
 django-unfold
 
 # Database
@@ -83,3 +85,4 @@ rich
 # Two-Factor Authentication
 pyotp
 qrcode
+scrapy==2.11.1

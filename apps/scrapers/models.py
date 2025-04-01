@@ -1,3 +1,6 @@
+"""
+Models for the scrapers app.
+"""
 from django.db import models
 
 
@@ -8,7 +11,19 @@ class ScraperJob(models.Model):
     status = models.CharField(max_length=20, default="pending")
     created_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
-
+    
+    # Stats
+    items_scraped = models.IntegerField(default=0)
+    deals_created = models.IntegerField(default=0)
+    deals_updated = models.IntegerField(default=0)
+    error_count = models.IntegerField(default=0)
+    
+    # Error information
+    error_message = models.TextField(blank=True)
+    
+    # Source information
+    source_url = models.URLField(blank=True)
+    
     class Meta:
         ordering = ["-created_at"]
         verbose_name = "Scraper Job"
@@ -16,45 +31,19 @@ class ScraperJob(models.Model):
 
     def __str__(self):
         return f"{self.spider_name} - {self.status}"
-
-
-class ScrapedDeal(models.Model):
-    """Model representing a deal that was scraped from a website."""
-
-    job = models.ForeignKey(ScraperJob, on_delete=models.CASCADE, related_name="deals")
-    title = models.CharField(max_length=255)
-    url = models.URLField()
-    is_valid = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ["-created_at"]
-        verbose_name = "Scraped Deal"
-        verbose_name_plural = "Scraped Deals"
-
-    def to_dict(self):
-        """Convert model instance to dictionary."""
-        return {
-            "title": self.title,
-            "url": self.url,
-        }
-
-    def __str__(self):
-        return self.title
-
-
-class ScraperProxy(models.Model):
-    """Model representing a proxy server for scrapers."""
-
-    host = models.CharField(max_length=100)
-    port = models.IntegerField()
-    is_active = models.BooleanField(default=True)
-    failure_count = models.IntegerField(default=0)
-
-    class Meta:
-        verbose_name = "Scraper Proxy"
-        verbose_name_plural = "Scraper Proxies"
-        unique_together = ["host", "port"]
-
-    def __str__(self):
-        return f"{self.host}:{self.port}"
+    
+    @property
+    def duration(self):
+        """Calculate the duration of the job."""
+        if not self.completed_at:
+            return None
+        
+        return self.completed_at - self.created_at
+    
+    @property
+    def success_rate(self):
+        """Calculate the success rate of the job."""
+        if self.items_scraped == 0:
+            return 0
+        
+        return (1 - (self.error_count / self.items_scraped)) * 100

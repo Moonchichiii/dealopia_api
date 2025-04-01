@@ -2,11 +2,9 @@
 Base settings for Dealopia API project.
 Contains common settings shared across all environments.
 """
-
 import os
 from datetime import timedelta
 from pathlib import Path
-
 from decouple import config
 from django.utils.translation import gettext_lazy as _
 
@@ -31,6 +29,8 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
+    'cloudinary_storage',
+    'cloudinary',
     "django.contrib.staticfiles",
     "django.contrib.gis",
     "django.contrib.sites",
@@ -40,7 +40,24 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
     "drf_spectacular",
-    "wagtail",
+    'wagtail.contrib.forms',
+    'wagtail.contrib.redirects',
+    'wagtail.embeds',
+    'wagtail.sites',
+    'wagtail.users',
+    'wagtail.snippets',
+    'wagtail.documents',
+    'wagtail.images',
+    'wagtail.search',
+    'wagtail.admin',
+    'wagtail',
+    'wagtail.api.v2',
+    
+    
+    'wagtail_modeladmin',
+    
+    'modelcluster',
+    'taggit',
     "corsheaders",
     "django_redis",
     "leaflet",
@@ -59,6 +76,8 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.deals",
     "apps.shops",
+    "apps.products",
+    "apps.images",
     "apps.categories",
     "apps.locations",
     "apps.scrapers",
@@ -80,7 +99,13 @@ MIDDLEWARE = [
     "core.middleware.security.SecurityMiddleware",
     "core.middleware.language.UserLanguageMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    'wagtail.contrib.redirects.middleware.RedirectMiddleware',
 ]
+
+
+# Wagtail settings
+WAGTAIL_SITE_NAME = "Dealopia"
+WAGTAILADMIN_BASE_URL = 'http://localhost:8000' 
 
 SITE_ID = 1
 
@@ -167,8 +192,29 @@ STATIC_URL = "/static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "static_collected")
 STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
 
-MEDIA_URL = "/media/"
+MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+
+# Cloudinary configuration
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME', default=''),
+    'API_KEY': config('CLOUDINARY_API_KEY', default=''),
+    'API_SECRET': config('CLOUDINARY_API_SECRET', default=''),
+    'SECURE': True,
+    'MEDIA_TAG': 'media',
+    'INVALID_VIDEO_ERROR_MESSAGE': 'Please upload a valid video file.',
+    'EXCLUDE_DELETE_ORPHANED_MEDIA_PATHS': [],
+    'STATIC_TAG': 'static',
+    'STATIC_IMAGES_EXTENSIONS': ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'],
+    'STATIC_VIDEOS_EXTENSIONS': ['mp4', 'webm', 'ogg'],
+    'MAGIC_FILE_PATH': 'magic',
+}
+
+# Wagtail CloudinaryImage model
+WAGTAILIMAGES_IMAGE_MODEL = 'images.CloudinaryImage'
+
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+THUMBNAIL_DEFAULT_STORAGE = 'cloudinary_storage.storage.RawMediaCloudinaryStorage'
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

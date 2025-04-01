@@ -1,4 +1,5 @@
 from datetime import datetime
+
 from django.contrib.auth.signals import user_logged_in
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
@@ -107,9 +108,9 @@ def update_last_login(sender, user, request, **kwargs):
             "user_agent": request.META.get("HTTP_USER_AGENT") if request else None,
         }
     )
-    
+
     updates = {"login_events": login_events[-10:]}
     _update_user_preferences(user, updates)
-    
+
     # Update last_login separately
     User.objects.filter(pk=user.pk).update(last_login=user.last_login)
