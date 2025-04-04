@@ -67,6 +67,12 @@ class CategoryService:
         """Get categories with most active deals."""
         categories = CategoryService.get_categories_with_deal_counts()
         return categories.filter(deal_count__gt=0)[:limit]
+    
+    @staticmethod
+    def get_categories_by_name(name: str):
+        from apps.categories.models import Category
+        return Category.objects.filter(name__icontains=name)
+
 
     @staticmethod
     def get_category_breadcrumbs(category_id):

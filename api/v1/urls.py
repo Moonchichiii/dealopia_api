@@ -20,6 +20,7 @@ from api.v1.views.deals import DealViewSet
 from api.v1.views.locations import LocationViewSet
 from api.v1.views.shops import ShopViewSet
 from api.v1.views.products import ProductViewSet
+from api.v1.views.search import SearchView
 
 # Set up the default router
 router = DefaultRouter()
@@ -82,4 +83,5 @@ urlpatterns = [
         LocationViewSet.as_view({"get": "nearby"}),
         name="locations-nearby",
     ),
+     path("search/", SearchView.as_view(), name="search"),
 ]

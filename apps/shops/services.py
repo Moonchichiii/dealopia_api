@@ -1,7 +1,9 @@
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
 from django.db.models import Avg, Count, F, Q
-
+from django.contrib.gis.geos import Point
+from django.contrib.gis.measure import D
+from django.contrib.gis.db.models.functions import Distance
 from apps.deals.models import Deal
 from apps.locations.models import Location
 
@@ -58,19 +60,16 @@ class ShopService:
 
     @staticmethod
     def get_shops_by_location(latitude, longitude, radius_km=10):
-        """Get shops near a specific location using geodjango"""
-        user_location = Point(longitude, latitude, srid=4326)
-
+        user_location = Point(float(longitude), float(latitude), srid=4326)
         nearby_locations = Location.objects.filter(
-            point__distance_lte=(user_location, D(km=radius_km))
-        )
-
+                    coordinates__distance_lte=(user_location, D(km=radius_km))
+                            )
         return (
             ShopService.get_verified_shops()
-            .filter(location__in=nearby_locations)
-            .annotate(distance=F("location__point__distance_to")(user_location))
-            .order_by("distance")
-        )
+           .filter(location__in=nearby_locations)
+           .annotate(distance=Distance("location__coordinates", user_location))
+           .order_by("distance")
+    )
 
     @staticmethod
     def get_shop_with_deals(shop_id):

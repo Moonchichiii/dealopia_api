@@ -3,27 +3,18 @@ Models for the scrapers app.
 """
 from django.db import models
 
-
 class ScraperJob(models.Model):
-    """Model representing a web scraper job execution."""
-
     spider_name = models.CharField(max_length=100)
     status = models.CharField(max_length=20, default="pending")
     created_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
-    
-    # Stats
     items_scraped = models.IntegerField(default=0)
     deals_created = models.IntegerField(default=0)
     deals_updated = models.IntegerField(default=0)
     error_count = models.IntegerField(default=0)
-    
-    # Error information
     error_message = models.TextField(blank=True)
-    
-    # Source information
     source_url = models.URLField(blank=True)
-    
+
     class Meta:
         ordering = ["-created_at"]
         verbose_name = "Scraper Job"
@@ -31,6 +22,7 @@ class ScraperJob(models.Model):
 
     def __str__(self):
         return f"{self.spider_name} - {self.status}"
+
     
     @property
     def duration(self):

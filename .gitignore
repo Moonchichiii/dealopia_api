@@ -123,3 +123,4 @@ geckodriver.log
 local/
 
 pytest_cache/
+.coveragerc

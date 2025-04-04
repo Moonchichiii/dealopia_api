@@ -9,6 +9,7 @@ class ShopListSerializer(serializers.ModelSerializer):
         source="categories", many=True, read_only=True
     )
     deal_count = serializers.SerializerMethodField()
+    # Convert the annotated Distance object into a float
     distance = serializers.SerializerMethodField()
     logo_url = serializers.SerializerMethodField()
 
@@ -31,6 +32,7 @@ class ShopListSerializer(serializers.ModelSerializer):
 
     def get_deal_count(self, obj):
         now = timezone.now()
+        # Use prefetched deals if available; otherwise, query the related deals.
         if hasattr(obj, "prefetched_deals"):
             return sum(
                 1
@@ -44,6 +46,8 @@ class ShopListSerializer(serializers.ModelSerializer):
         ).count()
 
     def get_distance(self, obj):
+        # If the queryset has an annotated "distance" field (a Distance object),
+        # convert it to a float (in kilometers) before serialization.
         if hasattr(obj, "distance") and obj.distance:
             return round(obj.distance.km, 1)
         return None
@@ -106,12 +110,14 @@ class ShopSerializer(ShopListSerializer):
     def get_location_details(self, obj):
         if not obj.location:
             return None
+        # Return a dictionary of location details.
         return {
             "address": obj.location.address,
             "city": obj.location.city,
             "state": obj.location.state,
             "country": obj.location.country,
             "postal_code": obj.location.postal_code,
+            # Ensure coordinates are returned in the correct order: y is latitude, x is longitude.
             "latitude": obj.location.coordinates.y if obj.location.coordinates else None,
             "longitude": obj.location.coordinates.x if obj.location.coordinates else None,
         }

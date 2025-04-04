@@ -56,3 +56,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
         """Extract and validate the limit parameter from request"""
         limit = request.query_params.get("limit", default)
         return int(limit)
+
+    @staticmethod
+    def get_categories_by_name(name: str):
+        return Category.objects.filter(name__icontains=name)
