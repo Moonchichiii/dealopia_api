@@ -1,14 +1,7 @@
-# Standard library
-import re
-
-# Django
 from django.urls import include, path, re_path
-
-# Third-party
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenVerifyView
 
-# Local
 from api.v1.views.accounts import UserViewSet
 from api.v1.views.auth import (CustomTokenObtainPairView, SessionInfoView,
                                SocialAuthCallbackView,
@@ -18,11 +11,11 @@ from api.v1.views.auth import (CustomTokenObtainPairView, SessionInfoView,
 from api.v1.views.categories import CategoryViewSet
 from api.v1.views.deals import DealViewSet
 from api.v1.views.locations import LocationViewSet
-from api.v1.views.shops import ShopViewSet
 from api.v1.views.products import ProductViewSet
 from api.v1.views.search import SearchView
+from api.v1.views.shops import ShopViewSet
 
-# Set up the default router
+# Set up the API router for core endpoints
 router = DefaultRouter()
 router.register(r"users", UserViewSet)
 router.register(r"deals", DealViewSet)
@@ -31,7 +24,7 @@ router.register(r"products", ProductViewSet, basename="product")
 router.register(r"categories", CategoryViewSet)
 router.register(r"locations", LocationViewSet)
 
-# Authentication related routes
+# Authentication related routes (unchanged)
 auth_patterns = [
     path("login/", CustomTokenObtainPairView.as_view(), name="login"),
     path("logout/", include("dj_rest_auth.urls")),
@@ -60,6 +53,7 @@ auth_patterns = [
 ]
 
 urlpatterns = [
+    # Core API endpoints
     path("", include(router.urls)),
     path("auth/", include(auth_patterns)),
     path("deals/nearby/", DealViewSet.as_view({"get": "nearby"}), name="deals-nearby"),
@@ -83,5 +77,5 @@ urlpatterns = [
         LocationViewSet.as_view({"get": "nearby"}),
         name="locations-nearby",
     ),
-     path("search/", SearchView.as_view(), name="search"),
+    path("search/", SearchView.as_view(), name="search"),
 ]

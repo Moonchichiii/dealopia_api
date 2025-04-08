@@ -6,7 +6,7 @@ from apps.locations.models import Location
 
 class LocationSerializer(serializers.ModelSerializer):
     """Serializer for Location model with readable/writable lat/long fields."""
-    
+
     latitude = serializers.FloatField(required=False)
     longitude = serializers.FloatField(required=False)
 

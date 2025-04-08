@@ -2,23 +2,23 @@
 Base settings for Dealopia API project.
 Contains common settings shared across all environments.
 """
+
 import os
 from datetime import timedelta
 from pathlib import Path
+
 from decouple import config
 from django.utils.translation import gettext_lazy as _
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# Base Directory
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-# Security settings
+# Security Settings
 SECRET_KEY = config("SECRET_KEY", default="django-insecure-your-secret-key-here")
-ALLOWED_HOSTS = config(
-    "ALLOWED_HOSTS", default="", cast=lambda v: [s.strip() for s in v.split(",") if s]
-)
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="", cast=lambda v: [s.strip() for s in v.split(",") if s])
 DEBUG = config("DEBUG", default=True, cast=bool)
 
-# Application definition
+# Application Definition
 INSTALLED_APPS = [
     # Django apps
     "unfold",
@@ -29,8 +29,8 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
-    'cloudinary_storage',
-    'cloudinary',
+    "cloudinary_storage",
+    "cloudinary",
     "django.contrib.staticfiles",
     "django.contrib.gis",
     "django.contrib.sites",
@@ -40,24 +40,21 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
     "drf_spectacular",
-    'wagtail.contrib.forms',
-    'wagtail.contrib.redirects',
-    'wagtail.embeds',
-    'wagtail.sites',
-    'wagtail.users',
-    'wagtail.snippets',
-    'wagtail.documents',
-    'wagtail.images',
-    'wagtail.search',
-    'wagtail.admin',
-    'wagtail',
-    'wagtail.api.v2',
-    
-    
-    'wagtail_modeladmin',
-    
-    'modelcluster',
-    'taggit',
+    "wagtail.contrib.forms",
+    "wagtail.contrib.redirects",
+    "wagtail.embeds",
+    "wagtail.sites",
+    "wagtail.users",
+    "wagtail.snippets",
+    "wagtail.documents",
+    "wagtail.images",
+    "wagtail.search",
+    "wagtail.admin",
+    "wagtail",
+    "wagtail.api.v2",
+    "wagtail_modeladmin",
+    "modelcluster",
+    "taggit",
     "corsheaders",
     "django_redis",
     "leaflet",
@@ -77,10 +74,10 @@ INSTALLED_APPS = [
     "apps.deals",
     "apps.shops",
     "apps.products",
-    "apps.images",
+    'apps.cms',
     "apps.categories",
     "apps.locations",
-    "apps.scrapers",
+    'apps.search',
 ]
 
 MIDDLEWARE = [
@@ -99,16 +96,39 @@ MIDDLEWARE = [
     "core.middleware.security.SecurityMiddleware",
     "core.middleware.language.UserLanguageMiddleware",
     "allauth.account.middleware.AccountMiddleware",
-    'wagtail.contrib.redirects.middleware.RedirectMiddleware',
+    "wagtail.contrib.redirects.middleware.RedirectMiddleware",
 ]
 
+# External API Keys
+GOOGLE_PLACES_API_KEY = config("GOOGLE_PLACES_API_KEY", default="dummy_key")
 
-# Wagtail settings
-WAGTAIL_SITE_NAME = "Dealopia"
-WAGTAILADMIN_BASE_URL = 'http://localhost:8000' 
+# Wagtail & CMS Settings
+WAGTAIL_SITE_NAME = "Dealopia Admin"
+WAGTAILADMIN_BASE_URL = "http://localhost:8000"
+WAGTAIL_FRONTEND_LOGIN_URL = None
+WAGTAIL_FRONTEND_LOGIN_TEMPLATE = None
+WAGTAILAPI_BASE_URL = "/api/cms"
+WAGTAILAPI_LIMIT_MAX = 100
+WAGTAILSEARCH_BACKENDS = {
+    'default': {
+        'BACKEND': 'wagtail.search.backends.database',
+    }
+}
+WAGTAIL_ENABLE_UPDATE_CHECK = False
+WAGTAILADMIN_RICH_TEXT_EDITORS = {
+    'default': {
+        'WIDGET': 'wagtail.admin.rich_text.DraftailRichTextArea',
+    },
+}
+WAGTAIL_ADMIN_BRANDING = "Dealopia API Admin"
+WAGTAILADMIN_STATIC_FILE_VERSION_STRINGS = True
+WAGTAILIMAGES_FORMAT_CONVERSIONS = {
+    'webp': 'webp',
+}
+WAGTAIL_API_LIMIT_MAX = 50
+WAGTAILIMAGES_IMAGE_MODEL = "cms.CloudinaryImage"
 
 SITE_ID = 1
-
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
@@ -116,6 +136,7 @@ CORS_ALLOWED_ORIGINS = [
 
 ROOT_URLCONF = "config.urls"
 
+# Templates
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -134,6 +155,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
+# Database & GeoDjango Settings
 DATABASES = {
     "default": {
         "ENGINE": "django.contrib.gis.db.backends.postgis",
@@ -146,35 +168,25 @@ DATABASES = {
         "OPTIONS": {"sslmode": "prefer"},
     }
 }
-
-# GeoDjango settings
 SPATIALITE_LIBRARY_PATH = "mod_spatialite"
 GDAL_LIBRARY_PATH = "C:/OSGeo4W/bin/gdal310.dll"
 GEOS_LIBRARY_PATH = "C:/OSGeo4W/bin/geos_c.dll"
 
+# Authentication & Password Validation
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
-    },
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
-
 AUTH_USER_MODEL = "accounts.User"
 
+# Internationalization
 LANGUAGE_CODE = "en"
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_L10N = True
 USE_TZ = True
-
 LANGUAGES = [
     ("en", _("English")),
     ("es", _("Spanish")),
@@ -183,42 +195,35 @@ LANGUAGES = [
     ("it", _("Italian")),
     ("pt", _("Portuguese")),
 ]
+LOCALE_PATHS = [os.path.join(BASE_DIR, "locale")]
 
-LOCALE_PATHS = [
-    os.path.join(BASE_DIR, "locale"),
-]
-
+# Static & Media Files
 STATIC_URL = "/static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "static_collected")
 STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
-
-MEDIA_URL = '/media/'
+MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
-# Cloudinary configuration
+# Cloudinary Configuration
 CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME', default=''),
-    'API_KEY': config('CLOUDINARY_API_KEY', default=''),
-    'API_SECRET': config('CLOUDINARY_API_SECRET', default=''),
-    'SECURE': True,
-    'MEDIA_TAG': 'media',
-    'INVALID_VIDEO_ERROR_MESSAGE': 'Please upload a valid video file.',
-    'EXCLUDE_DELETE_ORPHANED_MEDIA_PATHS': [],
-    'STATIC_TAG': 'static',
-    'STATIC_IMAGES_EXTENSIONS': ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'],
-    'STATIC_VIDEOS_EXTENSIONS': ['mp4', 'webm', 'ogg'],
-    'MAGIC_FILE_PATH': 'magic',
+    "CLOUD_NAME": config("CLOUDINARY_CLOUD_NAME", default=""),
+    "API_KEY": config("CLOUDINARY_API_KEY", default=""),
+    "API_SECRET": config("CLOUDINARY_API_SECRET", default=""),
+    "SECURE": True,
+    "MEDIA_TAG": "media",
+    "INVALID_VIDEO_ERROR_MESSAGE": "Please upload a valid video file.",
+    "EXCLUDE_DELETE_ORPHANED_MEDIA_PATHS": [],
+    "STATIC_TAG": "static",
+    "STATIC_IMAGES_EXTENSIONS": ["jpg", "jpeg", "png", "gif", "webp", "svg"],
+    "STATIC_VIDEOS_EXTENSIONS": ["mp4", "webm", "ogg"],
+    "MAGIC_FILE_PATH": "magic",
 }
-
-# Wagtail CloudinaryImage model
-WAGTAILIMAGES_IMAGE_MODEL = 'images.CloudinaryImage'
-
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-THUMBNAIL_DEFAULT_STORAGE = 'cloudinary_storage.storage.RawMediaCloudinaryStorage'
+DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
+THUMBNAIL_DEFAULT_STORAGE = "cloudinary_storage.storage.RawMediaCloudinaryStorage"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# JWT settings
+# JWT Settings
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
@@ -243,6 +248,7 @@ SIMPLE_JWT = {
     "USER_ID_CLAIM": "user_id",
 }
 
+# REST Framework Settings
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
@@ -277,22 +283,27 @@ LOGIN_REDIRECT_URL = "/"
 
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
-        "SCOPE": [
-            "profile",
-            "email",
-        ],
-        "AUTH_PARAMS": {
-            "access_type": "online",
-        },
+        "SCOPE": ["profile", "email"],
+        "AUTH_PARAMS": {"access_type": "online"},
     }
 }
 
+# API Documentation Settings (drf-spectacular)
 SPECTACULAR_SETTINGS = {
     "TITLE": "Dealopia API",
-    "DESCRIPTION": "API for Dealopia deals and offers platform",
+    "DESCRIPTION": "API for sustainable deals marketplace",
     "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "COMPONENT_SPLIT_REQUEST": True,
+    "TAGS": [
+        {"name": "Deals", "description": "Manage eco-friendly deals"},
+        {"name": "Shops", "description": "Manage sustainable shops"},
+        {"name": "Categories", "description": "Organize deals and shops"},
+        {"name": "Locations", "description": "Geospatial functionality"},
+    ],
 }
 
+# Leaflet Configuration
 LEAFLET_CONFIG = {
     "DEFAULT_CENTER": (0, 0),
     "DEFAULT_ZOOM": 2,
@@ -300,23 +311,22 @@ LEAFLET_CONFIG = {
     "MAX_ZOOM": 18,
 }
 
+# Cache Settings
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": "redis://127.0.0.1:6379/1",
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        },
+        "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
     }
 }
 
+# Celery Settings
 CELERY_BROKER_URL = "redis://localhost:6379/0"
 CELERY_RESULT_BACKEND = "redis://localhost:6379/0"
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
-
 CELERY_BEAT_SCHEDULE = {
     "update-expired-deals": {
         "task": "apps.deals.tasks.update_expired_deals",
@@ -340,6 +350,7 @@ CELERY_BEAT_SCHEDULE = {
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="noreply@dealopia.com")
 FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:5173")
 
+# Unfold Admin Settings
 UNFOLD = {
     "SITE_TITLE": "Dealopia Admin",
     "SITE_HEADER": "Dealopia",
@@ -349,46 +360,11 @@ UNFOLD = {
         "show_search": True,
         "show_all_applications": True,
         "navigation": [
-            {
-                "title": "Users",
-                "icon": "person",
-                "models": [
-                    "accounts.user",
-                ],
-                "items": [],
-            },
-            {
-                "title": "Deals",
-                "icon": "shopping_bag",
-                "models": [
-                    "deals.deal",
-                ],
-                "items": [],
-            },
-            {
-                "title": "Shops",
-                "icon": "store",
-                "models": [
-                    "shops.shop",
-                ],
-                "items": [],
-            },
-            {
-                "title": "Categories",
-                "icon": "category",
-                "models": [
-                    "categories.category",
-                ],
-                "items": [],
-            },
-            {
-                "title": "Locations",
-                "icon": "location_on",
-                "models": [
-                    "locations.location",
-                ],
-                "items": [],
-            },
+            {"title": "Users", "icon": "person", "models": ["accounts.user"], "items": []},
+            {"title": "Deals", "icon": "shopping_bag", "models": ["deals.deal"], "items": []},
+            {"title": "Shops", "icon": "store", "models": ["shops.shop"], "items": []},
+            {"title": "Categories", "icon": "category", "models": ["categories.category"], "items": []},
+            {"title": "Locations", "icon": "location_on", "models": ["locations.location"], "items": []},
         ],
     },
     "COLORS": {
@@ -407,9 +383,9 @@ UNFOLD = {
     "ENVIRONMENT_COLOR": "#FFC107",
 }
 
+# Logging Configuration
 LOGS_DIR = os.path.join(BASE_DIR, "logs")
 os.makedirs(LOGS_DIR, exist_ok=True)
-
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -428,12 +404,8 @@ LOGGING = {
         },
     },
     "filters": {
-        "require_debug_true": {
-            "()": "django.utils.log.RequireDebugTrue",
-        },
-        "require_debug_false": {
-            "()": "django.utils.log.RequireDebugFalse",
-        },
+        "require_debug_true": {"()": "django.utils.log.RequireDebugTrue"},
+        "require_debug_false": {"()": "django.utils.log.RequireDebugFalse"},
     },
     "handlers": {
         "console": {
@@ -541,18 +513,3 @@ LOGGING = {
 }
 
 SLOW_REQUEST_THRESHOLD = 1.0
-
-
-SPECTACULAR_SETTINGS = {
-    "TITLE": "Dealopia API",
-    "DESCRIPTION": "API for sustainable deals marketplace",
-    "VERSION": "1.0.0",
-    "SERVE_INCLUDE_SCHEMA": False,
-    "COMPONENT_SPLIT_REQUEST": True,
-    "TAGS": [
-        {"name": "Deals", "description": "Manage eco-friendly deals"},
-        {"name": "Shops", "description": "Manage sustainable shops"},
-        {"name": "Categories", "description": "Organize deals and shops"},
-        {"name": "Locations", "description": "Geospatial functionality"},
-    ],
-}

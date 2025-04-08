@@ -248,9 +248,13 @@ class TestShopAPI:
         url = reverse("shop-list")
         response = api_client.get(url, format="json")
         assert response.status_code == status.HTTP_200_OK
-        
+
         # If your API uses pagination, the results may be under the "results" key.
-        shops = response.data.get("results", response.data) if isinstance(response.data, dict) else response.data
+        shops = (
+            response.data.get("results", response.data)
+            if isinstance(response.data, dict)
+            else response.data
+        )
         assert len(shops) > 0
 
         # Find our shop in the returned list
@@ -270,7 +274,6 @@ class TestShopAPI:
         location_details = response.data.get("location_details")
         assert location_details is not None
         assert location_details["city"] == "Test City"
-
 
     def test_create_shop(self, authenticated_client, location, category):
         url = reverse("shop-list")
@@ -308,8 +311,10 @@ class TestShopAPI:
         shop = Shop.objects.get(id=response.data["id"])
         print(f"Retrieved shop from DB: {shop.name} (ID: {shop.id})")
         print(f"Shop owner: {shop.owner.email}")
-        print(f"Shop categories: {list(shop.categories.values_list('name', flat=True))}")
-        
+        print(
+            f"Shop categories: {list(shop.categories.values_list('name', flat=True))}"
+        )
+
         assert shop.name == "New Shop"
         assert shop.owner.email == "testuser@example.com"
         assert category in shop.categories.all()

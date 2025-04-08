@@ -33,8 +33,7 @@ class LocationService:
             return cached
 
         qs = (
-            Location.objects
-            .filter(coordinates__dwithin=(point, D(km=radius_km)))
+            Location.objects.filter(coordinates__dwithin=(point, D(km=radius_km)))
             .annotate(distance=Distance("coordinates", point))
             .order_by("distance")[:limit]
         )
@@ -55,10 +54,7 @@ class LocationService:
             The queryset annotated with deal_count
         """
         return location_qs.annotate(
-            deal_count=Count(
-                "shop__deals", 
-                filter=Q(shop__deals__is_verified=True)
-            )
+            deal_count=Count("shop__deals", filter=Q(shop__deals__is_verified=True))
         )
 
     @staticmethod

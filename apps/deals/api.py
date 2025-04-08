@@ -26,10 +26,10 @@ class EcoRetailerAPI:
     def __init__(self, source: str):
         """
         Initialize API client for the specified sustainable retail source.
-        
+
         Args:
             source: Name of the retail source to connect to
-        
+
         Raises:
             ValueError: If source is not supported
         """
@@ -40,21 +40,23 @@ class EcoRetailerAPI:
         self.config = self.SOURCES[source]
         self.base_url = self.config["url"]
         self.session = requests.Session()
-        self.session.headers.update({
-            "Content-Type": "application/json",
-            "User-Agent": "Dealopia/1.0 (sustainable-shopping-app)",
-        })
+        self.session.headers.update(
+            {
+                "Content-Type": "application/json",
+                "User-Agent": "Dealopia/1.0 (sustainable-shopping-app)",
+            }
+        )
 
     def fetch_deal_by_barcode(self, barcode: str):
         """
         Fetch product information by barcode from Open Food Facts.
-        
+
         Args:
             barcode: Product barcode to look up
-            
+
         Returns:
             List of standardized deal dictionaries
-            
+
         Raises:
             ValueError: If called on non-supported source
         """
@@ -73,13 +75,13 @@ class EcoRetailerAPI:
     def fetch_facilities(self, **params):
         """
         Fetch facility information from Open Apparel Registry.
-        
+
         Args:
             **params: Query parameters for the API request
-            
+
         Returns:
             List of standardized facility dictionaries
-            
+
         Raises:
             ValueError: If called on non-supported source
         """
@@ -100,10 +102,10 @@ class EcoRetailerAPI:
     def _parse_open_food_facts(self, data):
         """
         Parse Open Food Facts API response into standardized format.
-        
+
         Args:
             data: Raw API response data
-            
+
         Returns:
             List of standardized deal dictionaries
         """
@@ -133,10 +135,10 @@ class EcoRetailerAPI:
     def _parse_open_apparel_registry(self, data):
         """
         Parse Open Apparel Registry API response into standardized format.
-        
+
         Args:
             data: Raw API response data
-            
+
         Returns:
             List of standardized facility dictionaries
         """
@@ -144,14 +146,16 @@ class EcoRetailerAPI:
         standardized_facilities = []
         for facility in facilities:
             props = facility.get("properties", {})
-            standardized_facilities.append({
-                "name": props.get("name"),
-                "address": props.get("address"),
-                "country": props.get("country_name"),
-                "contributors": props.get("contributors", []),
-                "eco_certifications": props.get("certificates", []),
-                "source": "open_apparel_registry",
-                "external_id": props.get("id"),
-                "sustainability_score": 7.0,  # Static score
-            })
+            standardized_facilities.append(
+                {
+                    "name": props.get("name"),
+                    "address": props.get("address"),
+                    "country": props.get("country_name"),
+                    "contributors": props.get("contributors", []),
+                    "eco_certifications": props.get("certificates", []),
+                    "source": "open_apparel_registry",
+                    "external_id": props.get("id"),
+                    "sustainability_score": 7.0,  # Static score
+                }
+            )
         return standardized_facilities

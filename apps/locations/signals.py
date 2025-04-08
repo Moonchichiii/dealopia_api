@@ -12,7 +12,7 @@ def handle_location_saved(sender, instance, created, **kwargs):
 
 def _on_location_saved(location, created):
     """Handle post-commit logic for location save.
-    
+
     Geocodes address if coordinates are missing and invalidates cache entries.
     """
     # Import here to avoid circular import

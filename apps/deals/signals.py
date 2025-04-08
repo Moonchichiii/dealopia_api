@@ -15,6 +15,7 @@ def handle_deal_post_save(sender, instance, created, **kwargs):
     if created and instance.is_verified:
         try:
             from apps.deals.tasks import send_deal_notifications
+
             send_deal_notifications.delay(instance.id)
         except ImportError as e:
             print(f"Error importing send_deal_notifications: {e}")

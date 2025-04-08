@@ -26,12 +26,12 @@ User = get_user_model()
 
 
 def create_error_response(message, status_code):
-    """Helper to create consistent error responses"""
+    """Create consistent error responses."""
     return Response({"error": _(message)}, status=status_code)
 
 
 def create_success_response(data=None, message=None):
-    """Helper to create consistent success responses"""
+    """Create consistent success responses."""
     response_data = {"success": True}
     if message:
         response_data["message"] = _(message)
@@ -41,7 +41,7 @@ def create_success_response(data=None, message=None):
 
 
 def get_user_or_404(user_id):
-    """Get user by ID or raise 404"""
+    """Get user by ID or return None."""
     try:
         return User.objects.get(id=user_id)
     except User.DoesNotExist:
@@ -70,7 +70,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 
 class TwoFactorVerifyView(APIView):
-    """Verify a TOTP code for two-factor authentication"""
+    """Verify a TOTP code for two-factor authentication."""
 
     permission_classes = []
 
@@ -144,7 +144,7 @@ class TwoFactorVerifyView(APIView):
 
 
 class TwoFactorSetupView(APIView):
-    """Setup two-factor authentication for a user"""
+    """Setup two-factor authentication for a user."""
 
     permission_classes = [permissions.IsAuthenticated]
 
@@ -240,7 +240,7 @@ class TwoFactorSetupView(APIView):
 
 
 class TwoFactorDisableView(APIView):
-    """Disable two-factor authentication for a user"""
+    """Disable two-factor authentication for a user."""
 
     permission_classes = [permissions.IsAuthenticated]
 
@@ -293,7 +293,7 @@ class TwoFactorDisableView(APIView):
 
 
 class SessionInfoView(APIView):
-    """Get information about the current authenticated session"""
+    """Get information about the current authenticated session."""
 
     permission_classes = [permissions.IsAuthenticated]
 
@@ -322,7 +322,7 @@ class SessionInfoView(APIView):
 
 
 class LogoutView(APIView):
-    """Handle user logout completely by blacklisting tokens and clearing session"""
+    """Handle user logout by blacklisting tokens and clearing session."""
 
     permission_classes = [permissions.IsAuthenticated]
 
@@ -345,13 +345,11 @@ class LogoutView(APIView):
             logger.error(f"Error blacklisting tokens: {e}")
 
         try:
-            # Handle session invalidation
             if hasattr(request, "session"):
                 request.session.flush()
         except Exception as e:
             logger.error(f"Error flushing session: {e}")
 
-        # Create response and delete cookies
         response = Response(
             {"detail": "Successfully logged out."}, status=status.HTTP_200_OK
         )
@@ -378,7 +376,7 @@ class LogoutView(APIView):
 
 
 class TokenRefreshRateLimitedView(APIView):
-    """Custom token refresh view with rate limiting to prevent abuse"""
+    """Custom token refresh view with rate limiting to prevent abuse."""
 
     permission_classes = []
     throttle_scope = "token_refresh"
@@ -426,7 +424,7 @@ class TokenRefreshRateLimitedView(APIView):
 
 
 class SocialAuthCallbackView(APIView):
-    """Handle social authentication callbacks and return JWT tokens"""
+    """Handle social authentication callbacks and return JWT tokens."""
 
     permission_classes = []
 

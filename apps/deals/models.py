@@ -1,26 +1,21 @@
+from cloudinary.models import CloudinaryField
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
-from cloudinary.models import CloudinaryField
 
 
 class Deal(models.Model):
     """Deal model with sustainability focus and efficient indexing."""
-    
+
     title = models.CharField(max_length=255)
     shop = models.ForeignKey(
-        "shops.Shop", 
-        on_delete=models.CASCADE, 
-        related_name="deals"
+        "shops.Shop", on_delete=models.CASCADE, related_name="deals"
     )
     description = models.TextField()
     original_price = models.DecimalField(max_digits=10, decimal_places=2)
     discounted_price = models.DecimalField(max_digits=10, decimal_places=2)
     discount_percentage = models.PositiveIntegerField()
-    categories = models.ManyToManyField(
-        "categories.Category", 
-        related_name="deals"
-    )
+    categories = models.ManyToManyField("categories.Category", related_name="deals")
 
     image = CloudinaryField(
         "image",
@@ -40,20 +35,14 @@ class Deal(models.Model):
 
     # Sustainability metrics with milder defaults
     sustainability_score = models.DecimalField(
-        max_digits=3, 
-        decimal_places=1, 
-        default=0
+        max_digits=3, decimal_places=1, default=0
     )
     eco_certifications = models.JSONField(default=list, blank=True)
     carbon_footprint = models.DecimalField(
-        max_digits=6, 
-        decimal_places=2, 
-        null=True, 
-        blank=True
+        max_digits=6, decimal_places=2, null=True, blank=True
     )
     local_production = models.BooleanField(
-        default=False, 
-        help_text="Item produced locally"
+        default=False, help_text="Item produced locally"
     )
 
     # Analytics
@@ -64,14 +53,10 @@ class Deal(models.Model):
 
     # Source tracking
     source = models.CharField(
-        max_length=50, 
-        blank=True, 
-        help_text="Source API or scraper"
+        max_length=50, blank=True, help_text="Source API or scraper"
     )
     external_id = models.CharField(
-        max_length=100, 
-        blank=True, 
-        help_text="ID in external system"
+        max_length=100, blank=True, help_text="ID in external system"
     )
 
     class Meta:
@@ -111,9 +96,7 @@ class Deal(models.Model):
         """Return queryset of all active deals."""
         now = timezone.now()
         return cls.objects.filter(
-            is_verified=True, 
-            start_date__lte=now, 
-            end_date__gte=now
+            is_verified=True, start_date__lte=now, end_date__gte=now
         )
 
     @classmethod
@@ -144,10 +127,10 @@ class Deal(models.Model):
 
         # Category factors
         eco_categories = self.categories.filter(
-            Q(is_eco_friendly=True) |
-            Q(name__icontains="sustain") |
-            Q(name__icontains="eco") |
-            Q(name__icontains="green")
+            Q(is_eco_friendly=True)
+            | Q(name__icontains="sustain")
+            | Q(name__icontains="eco")
+            | Q(name__icontains="green")
         ).count()
         score += min(eco_categories * 0.5, 1.5)
 

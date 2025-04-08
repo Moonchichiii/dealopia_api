@@ -161,13 +161,14 @@ class TestLocationService:
 
         # Search near London
         london_point = Point(-0.1276, 51.5074)
-        nearby_london = LocationService.get_nearby_locations(london_point.y, london_point.x, 10)
+        nearby_london = LocationService.get_nearby_locations(
+            london_point.y, london_point.x, 10
+        )
         #                       ^ lat=51.5074               ^ lng=-0.1276
 
         assert location_nyc not in nearby_london
         assert location_la not in nearby_london
         assert location_london in nearby_london
-
 
     def test_get_deals_summary_for_locations(self, location_nyc, shop_nyc, deal_nyc):
         # Test the annotation functionality

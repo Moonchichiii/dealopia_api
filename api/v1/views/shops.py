@@ -1,12 +1,11 @@
-from rest_framework.permissions import AllowAny
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
-
 from api.v1.serializers.deals import DealSerializer
-from api.v1.serializers.shops import ShopSerializer, ShopCreateSerializer
+from api.v1.serializers.shops import ShopCreateSerializer, ShopSerializer
 from apps.shops.models import Shop
 
 

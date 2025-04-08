@@ -7,16 +7,15 @@ import django.core.cache
 import django.db.models
 import django.utils.crypto
 from django.contrib.auth import get_user_model
-from apps.shops.models import Shop
 from django.core.cache import cache
 from django.db.models import Prefetch
 from django.utils.crypto import get_random_string
 
 from apps.categories.models import Category
 from apps.deals.services import DealService
+from apps.shops.models import Shop
 from core.utils.cache import cache_result
 from core.utils.errors import ServiceError
-
 
 User = get_user_model()
 
@@ -39,7 +38,11 @@ class UserService:
                 User.objects.select_related("location")
                 .prefetch_related(
                     "favorite_categories",
-                    Prefetch("shops", queryset=Shop.objects.filter(is_verified=True), to_attr="prefetched_shops")
+                    Prefetch(
+                        "shops",
+                        queryset=Shop.objects.filter(is_verified=True),
+                        to_attr="prefetched_shops",
+                    ),
                 )
                 .get(id=user_id)
             )

@@ -6,26 +6,17 @@ from core.utils.api import api_response, error_response
 
 
 class BaseModelViewSet(viewsets.ModelViewSet):
-    """
-    Enhanced ModelViewSet with standardized responses and common functionality.
-
-    Features:
-    - Standardized response formatting
-    - Common filter backends
-    - Custom response methods
-    """
+    """Enhanced ModelViewSet with standardized response formatting and common filtering."""
 
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
 
     def get_serializer_context(self):
         """Add common context to serializers."""
-        context = super().get_serializer_context()
-        # Add additional common context here if needed
-        return context
+        return super().get_serializer_context()
 
     def finalize_response(self, request, response, *args, **kwargs):
         """Standardize response format for all methods."""
-        # Skip standardization for non-JSON responses (like BrowsableAPIRenderer)
+        # Skip standardization for non-JSON responses
         if (
             hasattr(response, "accepted_renderer")
             and not getattr(response.accepted_renderer, "format", None) == "json"
@@ -66,26 +57,21 @@ class BaseModelViewSet(viewsets.ModelViewSet):
         return super().finalize_response(request, response, *args, **kwargs)
 
     def list(self, request, *args, **kwargs):
-        """Enhanced list method with standardized response."""
-        response = super().list(request, *args, **kwargs)
-        return response
+        """List method with standardized response."""
+        return super().list(request, *args, **kwargs)
 
     def create(self, request, *args, **kwargs):
-        """Enhanced create method with standardized response."""
-        response = super().create(request, *args, **kwargs)
-        return response
+        """Create method with standardized response."""
+        return super().create(request, *args, **kwargs)
 
     def retrieve(self, request, *args, **kwargs):
-        """Enhanced retrieve method with standardized response."""
-        response = super().retrieve(request, *args, **kwargs)
-        return response
+        """Retrieve method with standardized response."""
+        return super().retrieve(request, *args, **kwargs)
 
     def update(self, request, *args, **kwargs):
-        """Enhanced update method with standardized response."""
-        response = super().update(request, *args, **kwargs)
-        return response
+        """Update method with standardized response."""
+        return super().update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
-        """Enhanced destroy method with standardized response."""
-        response = super().destroy(request, *args, **kwargs)
-        return response
+        """Destroy method with standardized response."""
+        return super().destroy(request, *args, **kwargs)

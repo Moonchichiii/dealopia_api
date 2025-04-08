@@ -1,6 +1,7 @@
 import requests
 from django.conf import settings
 
+
 def external_geocode_api(address):
     """
     Talk to an external geocoding provider, return (lat, lng) or None if fail.

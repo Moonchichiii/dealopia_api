@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 from django.contrib.gis.geos import Point
 from django_filters.rest_framework import DjangoFilterBackend
@@ -17,15 +16,16 @@ logger = logging.getLogger(__name__)
 
 
 class DealViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint for deals. Supports:
-      - Text search and filtering.
-      - Geospatial filtering (to show local deals).
-    """
+    """API endpoint for deals with text search and geospatial filtering."""
+
     queryset = Deal.objects.all()
     serializer_class = DealSerializer
     permission_classes = [IsShopOwnerOrReadOnly]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
     filterset_fields = {
         "shop": ["exact"],
         "categories": ["exact", "in"],
@@ -51,10 +51,7 @@ class DealViewSet(viewsets.ModelViewSet):
     ordering = ["-created_at"]
 
     def list(self, request, *args, **kwargs):
-        """
-        If latitude and longitude are provided in query parameters,
-        filter deals that are local (within a 100 km radius) and meet a minimum sustainability score.
-        """
+        """Filter deals by location and sustainability score if coordinates provided."""
         latitude = request.query_params.get("latitude")
         longitude = request.query_params.get("longitude")
         min_score = float(request.query_params.get("min_score", 5.0))
@@ -63,7 +60,9 @@ class DealViewSet(viewsets.ModelViewSet):
                 float(latitude), float(longitude), radius_km=100, min_score=min_score
             )
         else:
-            queryset = DealService.get_active_deals().filter(sustainability_score__gte=min_score)
+            queryset = DealService.get_active_deals().filter(
+                sustainability_score__gte=min_score
+            )
 
         page = self.paginate_queryset(queryset)
         if page is not None:
@@ -97,6 +96,7 @@ class DealViewSet(viewsets.ModelViewSet):
     )
     @action(detail=False)
     def featured(self, request):
+        """Return featured deals with optional filtering."""
         limit = int(request.query_params.get("limit", 6))
         category = request.query_params.get("category")
         shop = request.query_params.get("shop")
@@ -111,12 +111,15 @@ class DealViewSet(viewsets.ModelViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name="min_score", description="Minimum sustainability score", type=float),
+            OpenApiParameter(
+                name="min_score", description="Minimum sustainability score", type=float
+            ),
             OpenApiParameter(name="limit", description="Result limit", type=int),
         ]
     )
     @action(detail=False)
     def sustainable(self, request):
+        """Return deals meeting minimum sustainability criteria."""
         try:
             min_score = float(request.query_params.get("min_score", 7.0))
             limit = int(request.query_params.get("limit", 10))
@@ -124,14 +127,84 @@ class DealViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(deals, many=True)
             return Response(serializer.data)
         except ValueError:
-            return Response({"error": "Invalid parameters"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Invalid parameters"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
     @action(detail=True, methods=["post"])
     def track_view(self, request, pk=None):
+        """Record a view interaction for a deal."""
         DealService.record_interaction(pk, "view")
         return Response({"status": "view recorded"})
 
     @action(detail=True, methods=["post"])
     def track_click(self, request, pk=None):
+        """Record a click interaction for a deal."""
         DealService.record_interaction(pk, "click")
         return Response({"status": "click recorded"})
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="latitude", description="User latitude", required=True, type=float
+            ),
+            OpenApiParameter(
+                name="longitude",
+                description="User longitude",
+                required=True,
+                type=float,
+            ),
+            OpenApiParameter(
+                name="radius", description="Search radius in km", type=float, default=10
+            ),
+            OpenApiParameter(
+                name="limit",
+                description="Maximum number of results",
+                type=int,
+                default=20,
+            ),
+            OpenApiParameter(
+                name="min_sustainability",
+                description="Minimum sustainability score",
+                type=float,
+                default=0,
+            ),
+            OpenApiParameter(
+                name="categories",
+                description="Category IDs (comma-separated)",
+                type=str,
+            ),
+        ]
+    )
+    @action(detail=False, methods=["get"])
+    def nearby(self, request):
+        """Get deals near a specific location."""
+        try:
+            latitude = float(request.query_params.get("latitude"))
+            longitude = float(request.query_params.get("longitude"))
+        except (ValueError, TypeError):
+            return Response(
+                {"error": "Valid latitude and longitude are required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        radius_km = float(request.query_params.get("radius", 10))
+        limit = int(request.query_params.get("limit", 20))
+        min_sustainability = float(request.query_params.get("min_sustainability", 0))
+
+        categories = request.query_params.get("categories")
+        category_ids = None
+        if categories:
+            category_ids = [int(c) for c in categories.split(",")]
+
+        deals = DealService.get_deals_near_location(
+            latitude=latitude,
+            longitude=longitude,
+            radius_km=radius_km,
+            limit=limit,
+            min_sustainability=min_sustainability,
+            categories=category_ids,
+        )
+
+        serializer = self.get_serializer(deals, many=True)
+        return Response(serializer.data)

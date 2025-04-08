@@ -181,11 +181,10 @@ class TestUserAPI:
         client, user = authenticated_client
         url = reverse("user-change-password")
         data = {
-    "current_password": user_data["password"],
-    "new_password": "NewPassword123!",
-    "new_password_confirm": "NewPassword123!",
-}
-
+            "current_password": user_data["password"],
+            "new_password": "NewPassword123!",
+            "new_password_confirm": "NewPassword123!",
+        }
 
         response = client.post(url, data)
 
