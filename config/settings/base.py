@@ -15,7 +15,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # Security Settings
 SECRET_KEY = config("SECRET_KEY", default="django-insecure-your-secret-key-here")
-ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="", cast=lambda v: [s.strip() for s in v.split(",") if s])
+ALLOWED_HOSTS = config(
+    "ALLOWED_HOSTS", default="", cast=lambda v: [s.strip() for s in v.split(",") if s]
+)
 DEBUG = config("DEBUG", default=True, cast=bool)
 
 # Application Definition
@@ -74,10 +76,11 @@ INSTALLED_APPS = [
     "apps.deals",
     "apps.shops",
     "apps.products",
-    'apps.cms',
+    "apps.cms",
+    "apps.chatbot",
     "apps.categories",
     "apps.locations",
-    'apps.search',
+    "apps.search",
 ]
 
 MIDDLEWARE = [
@@ -110,20 +113,20 @@ WAGTAIL_FRONTEND_LOGIN_TEMPLATE = None
 WAGTAILAPI_BASE_URL = "/api/cms"
 WAGTAILAPI_LIMIT_MAX = 100
 WAGTAILSEARCH_BACKENDS = {
-    'default': {
-        'BACKEND': 'wagtail.search.backends.database',
+    "default": {
+        "BACKEND": "wagtail.search.backends.database",
     }
 }
 WAGTAIL_ENABLE_UPDATE_CHECK = False
 WAGTAILADMIN_RICH_TEXT_EDITORS = {
-    'default': {
-        'WIDGET': 'wagtail.admin.rich_text.DraftailRichTextArea',
+    "default": {
+        "WIDGET": "wagtail.admin.rich_text.DraftailRichTextArea",
     },
 }
 WAGTAIL_ADMIN_BRANDING = "Dealopia API Admin"
 WAGTAILADMIN_STATIC_FILE_VERSION_STRINGS = True
 WAGTAILIMAGES_FORMAT_CONVERSIONS = {
-    'webp': 'webp',
+    "webp": "webp",
 }
 WAGTAIL_API_LIMIT_MAX = 50
 WAGTAILIMAGES_IMAGE_MODEL = "cms.CloudinaryImage"
@@ -133,6 +136,8 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
 ]
+
+OPENAI_API_KEY= config('OPENAI_API_KEY')
 
 ROOT_URLCONF = "config.urls"
 
@@ -174,7 +179,9 @@ GEOS_LIBRARY_PATH = "C:/OSGeo4W/bin/geos_c.dll"
 
 # Authentication & Password Validation
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
+    },
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
@@ -360,11 +367,31 @@ UNFOLD = {
         "show_search": True,
         "show_all_applications": True,
         "navigation": [
-            {"title": "Users", "icon": "person", "models": ["accounts.user"], "items": []},
-            {"title": "Deals", "icon": "shopping_bag", "models": ["deals.deal"], "items": []},
+            {
+                "title": "Users",
+                "icon": "person",
+                "models": ["accounts.user"],
+                "items": [],
+            },
+            {
+                "title": "Deals",
+                "icon": "shopping_bag",
+                "models": ["deals.deal"],
+                "items": [],
+            },
             {"title": "Shops", "icon": "store", "models": ["shops.shop"], "items": []},
-            {"title": "Categories", "icon": "category", "models": ["categories.category"], "items": []},
-            {"title": "Locations", "icon": "location_on", "models": ["locations.location"], "items": []},
+            {
+                "title": "Categories",
+                "icon": "category",
+                "models": ["categories.category"],
+                "items": [],
+            },
+            {
+                "title": "Locations",
+                "icon": "location_on",
+                "models": ["locations.location"],
+                "items": [],
+            },
         ],
     },
     "COLORS": {

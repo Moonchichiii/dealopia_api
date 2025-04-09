@@ -5,7 +5,8 @@ This module provides a custom storage backend for Wagtail integration with Cloud
 Assumes Cloudinary is already configured via your settings/environment.
 """
 
-from cloudinary import uploader, utils as cloudinary_utils
+from cloudinary import uploader
+from cloudinary import utils as cloudinary_utils
 from django.core.files.storage import Storage
 
 
@@ -16,7 +17,9 @@ class CloudinaryWagtailStorage(Storage):
 
     def _open(self, name, mode="rb"):
         # Opening files directly from Cloudinary is not supported.
-        raise NotImplementedError("Opening files is not supported by CloudinaryWagtailStorage.")
+        raise NotImplementedError(
+            "Opening files is not supported by CloudinaryWagtailStorage."
+        )
 
     def _save(self, name, content):
         """

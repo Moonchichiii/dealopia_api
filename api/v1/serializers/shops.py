@@ -1,8 +1,8 @@
 import json
 
+from cloudinary.utils import cloudinary_url
 from django.utils import timezone
 from rest_framework import serializers
-from cloudinary.utils import cloudinary_url
 
 from api.v1.serializers.categories import CategoryListSerializer
 from apps.shops.models import Shop
@@ -57,14 +57,14 @@ class ShopListSerializer(serializers.ModelSerializer):
     def get_logo_url(self, obj):
         """
         Generate optimized Cloudinary URL for the shop logo.
-        
+
         Returns a properly formatted Cloudinary URL with transformations
         if the shop has a logo image, or None otherwise.
         """
         if not obj.logo:
             return None
-            
-        if hasattr(obj.logo, 'file') and hasattr(obj.logo.file, 'public_id'):
+
+        if hasattr(obj.logo, "file") and hasattr(obj.logo.file, "public_id"):
             # This is a Cloudinary image, generate optimized URL
             options = {
                 "quality": "auto",
@@ -74,24 +74,26 @@ class ShopListSerializer(serializers.ModelSerializer):
             }
             url, _ = cloudinary_url(obj.logo.file.public_id, **options)
             return url
-        
+
         # Fallback for non-Cloudinary images
         request = self.context.get("request")
         if request:
             return request.build_absolute_uri(obj.logo.url)
         return obj.logo.url
-        
+
     def get_banner_url(self, obj):
         """
         Generate optimized Cloudinary URL for the shop banner.
-        
+
         Returns a properly formatted Cloudinary URL with transformations
         if the shop has a banner image, or None otherwise.
         """
-        if not hasattr(obj, 'banner_image') or not obj.banner_image:
+        if not hasattr(obj, "banner_image") or not obj.banner_image:
             return None
-            
-        if hasattr(obj.banner_image, 'file') and hasattr(obj.banner_image.file, 'public_id'):
+
+        if hasattr(obj.banner_image, "file") and hasattr(
+            obj.banner_image.file, "public_id"
+        ):
             # This is a Cloudinary image, generate optimized URL
             options = {
                 "quality": "auto",
@@ -103,7 +105,7 @@ class ShopListSerializer(serializers.ModelSerializer):
             }
             url, _ = cloudinary_url(obj.banner_image.file.public_id, **options)
             return url
-        
+
         # Fallback for non-Cloudinary images
         request = self.context.get("request")
         if request and obj.banner_image:
@@ -226,10 +228,12 @@ class ShopCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         user = self.context["request"].user
-        validated_data.update({
-            "owner": user, 
-            "is_verified": False, 
-            "rating": 0,
-            "sustainability_score": 5.0,
-        })
+        validated_data.update(
+            {
+                "owner": user,
+                "is_verified": False,
+                "rating": 0,
+                "sustainability_score": 5.0,
+            }
+        )
         return super().create(validated_data)

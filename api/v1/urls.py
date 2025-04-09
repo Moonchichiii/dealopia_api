@@ -15,6 +15,8 @@ from api.v1.views.products import ProductViewSet
 from api.v1.views.search import SearchView
 from api.v1.views.shops import ShopViewSet
 
+from api.v1.views.chatbot import dealopia_chatbot 
+
 # Set up the API router for core endpoints
 router = DefaultRouter()
 router.register(r"users", UserViewSet)
@@ -24,7 +26,7 @@ router.register(r"products", ProductViewSet, basename="product")
 router.register(r"categories", CategoryViewSet)
 router.register(r"locations", LocationViewSet)
 
-# Authentication related routes (unchanged)
+# Authentication related routes
 auth_patterns = [
     path("login/", CustomTokenObtainPairView.as_view(), name="login"),
     path("logout/", include("dj_rest_auth.urls")),
@@ -78,4 +80,7 @@ urlpatterns = [
         name="locations-nearby",
     ),
     path("search/", SearchView.as_view(), name="search"),
+    path("chatbot/", dealopia_chatbot, name="chatbot")
+
 ]
+

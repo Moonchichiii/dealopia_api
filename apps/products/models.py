@@ -86,12 +86,12 @@ class Product(models.Model):
         _("Specifications"), default=dict, blank=True, null=True
     )
     sustainability_score = models.DecimalField(
-    _("Sustainability Score"),
-    max_digits=4,
-    decimal_places=2,
-    default=5.0,
-    help_text=_("A score representing the product's sustainability")
-)
+        _("Sustainability Score"),
+        max_digits=4,
+        decimal_places=2,
+        default=5.0,
+        help_text=_("A score representing the product's sustainability"),
+    )
     meta_title = models.CharField(_("Meta Title"), max_length=255, blank=True)
     meta_description = models.CharField(
         _("Meta Description"), max_length=255, blank=True

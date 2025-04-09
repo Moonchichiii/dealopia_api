@@ -1,5 +1,5 @@
-from rest_framework import serializers
 from cloudinary.utils import cloudinary_url
+from rest_framework import serializers
 
 from api.v1.serializers.categories import CategoryListSerializer
 from api.v1.serializers.shops import ShopListSerializer
@@ -45,14 +45,14 @@ class ProductListSerializer(serializers.ModelSerializer):
     def get_image_url(self, obj):
         """
         Generate optimized Cloudinary URL for the product image.
-        
+
         Returns a properly formatted Cloudinary URL with transformations
         if the product has an image, or None otherwise.
         """
         if not obj.image:
             return None
-            
-        if hasattr(obj.image, 'file') and hasattr(obj.image.file, 'public_id'):
+
+        if hasattr(obj.image, "file") and hasattr(obj.image.file, "public_id"):
             # This is a Cloudinary image, generate optimized URL
             options = {
                 "quality": "auto",
@@ -61,7 +61,7 @@ class ProductListSerializer(serializers.ModelSerializer):
             }
             url, _ = cloudinary_url(obj.image.file.public_id, **options)
             return url
-        
+
         # Fallback for non-Cloudinary images
         request = self.context.get("request")
         if request:

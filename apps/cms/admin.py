@@ -8,36 +8,38 @@ Since this is a backend-only API, we focus on API-related functionality.
 from django.core.exceptions import PermissionDenied
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
-
+from wagtail_modeladmin.helpers import ButtonHelper, PermissionHelper
 # Use wagtail_modeladmin (installed as "wagtail_modeladmin") rather than "wagtail.modeladmin"
 from wagtail_modeladmin.options import ModelAdmin
-from wagtail_modeladmin.helpers import ButtonHelper, PermissionHelper
 from wagtail_modeladmin.views import IndexView
 
 
 class ApiModelAdmin(ModelAdmin):
     """
     Base ModelAdmin class with API-focused customizations.
-    
+
     This class extends ModelAdmin with features specifically
     designed for managing API content.
     """
-    list_display = ('id', 'created_at', 'updated_at')
+
+    list_display = ("id", "created_at", "updated_at")
 
     def api_link_button(self, obj):
         """Return a button to view the API endpoint for this object."""
         return format_html(
             '<a href="/api/v1/{}/{}/" class="button button-small" target="_blank">View API</a>',
-            self.model._meta.model_name, obj.id
+            self.model._meta.model_name,
+            obj.id,
         )
-    api_link_button.short_description = _('API Endpoint')
+
+    api_link_button.short_description = _("API Endpoint")
 
     def get_list_display(self, request):
         """Append API link button to list display if applicable."""
         list_display = super().get_list_display(request)
-        if hasattr(self.model, 'id'):
-            if self.model._meta.model_name in ['shop', 'product', 'deal', 'category']:
-                return list_display + ('api_link_button',)
+        if hasattr(self.model, "id"):
+            if self.model._meta.model_name in ["shop", "product", "deal", "category"]:
+                return list_display + ("api_link_button",)
         return list_display
 
     def get_queryset(self, request):
@@ -45,9 +47,11 @@ class ApiModelAdmin(ModelAdmin):
         qs = super().get_queryset(request)
         if request.user.is_staff:
             return qs
-        if hasattr(self.model, 'owner'):
+        if hasattr(self.model, "owner"):
             return qs.filter(owner=request.user)
-        elif hasattr(self.model, 'shop') and hasattr(self.model.shop.field.related_model, 'owner'):
+        elif hasattr(self.model, "shop") and hasattr(
+            self.model.shop.field.related_model, "owner"
+        ):
             return qs.filter(shop__owner=request.user)
         return qs.none()
 
@@ -55,9 +59,13 @@ class ApiModelAdmin(ModelAdmin):
         """Return True if the user can edit the object."""
         if request.user.is_staff:
             return True
-        if hasattr(obj, 'owner') and obj.owner == request.user:
+        if hasattr(obj, "owner") and obj.owner == request.user:
             return True
-        if hasattr(obj, 'shop') and hasattr(obj.shop, 'owner') and obj.shop.owner == request.user:
+        if (
+            hasattr(obj, "shop")
+            and hasattr(obj.shop, "owner")
+            and obj.shop.owner == request.user
+        ):
             return True
         return False
 
@@ -68,13 +76,15 @@ class ApiModelAdmin(ModelAdmin):
     def save_model(self, request, obj, form, change):
         """Ensure shop owners only create content for shops they own."""
         if not request.user.is_staff:
-            if hasattr(obj, 'shop') and obj.shop is not None:
+            if hasattr(obj, "shop") and obj.shop is not None:
                 if obj.shop.owner != request.user:
-                    raise PermissionDenied("You can only create content for shops you own.")
-            if not change and hasattr(obj, 'owner') and obj.owner is None:
+                    raise PermissionDenied(
+                        "You can only create content for shops you own."
+                    )
+            if not change and hasattr(obj, "owner") and obj.owner is None:
                 obj.owner = request.user
         return super().save_model(request, obj, form, change)
-        
+
 
 class ProductButtonHelper(ButtonHelper):
     """Custom button helper to add bulk action buttons."""

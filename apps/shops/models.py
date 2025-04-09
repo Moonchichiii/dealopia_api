@@ -1,16 +1,22 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+
 def default_dict():
+    """Default empty dict for JSON fields."""
     return {}
 
+
 def default_list():
+    """Default empty list for JSON fields."""
     return []
+
 
 class Shop(models.Model):
     """
     Represents a shop/business entity with its details, location, and sustainability metrics.
     """
+
     name = models.CharField(_("Name"), max_length=255)
     owner = models.ForeignKey(
         "accounts.User",
@@ -35,7 +41,9 @@ class Shop(models.Model):
     )
     is_verified = models.BooleanField(_("Verified"), default=False)
     is_featured = models.BooleanField(_("Featured"), default=False)
-    rating = models.DecimalField(_("Rating"), max_digits=3, decimal_places=2, default=0.0)
+    rating = models.DecimalField(
+        _("Rating"), max_digits=3, decimal_places=2, default=0.0
+    )
     opening_hours = models.JSONField(_("Opening Hours"), default=default_dict)
     created_at = models.DateTimeField(_("Created At"), auto_now_add=True)
     updated_at = models.DateTimeField(_("Updated At"), auto_now=True)
@@ -46,13 +54,13 @@ class Shop(models.Model):
         _("Sustainability Initiatives"), default=default_list, blank=True
     )
     verified_sustainable = models.BooleanField(_("Verified Sustainable"), default=False)
-    # NEW FIELD: sustainability_score
+    # Sustainability score field
     sustainability_score = models.DecimalField(
         _("Sustainability Score"),
         max_digits=4,
         decimal_places=2,
         default=5.0,
-        help_text=_("A score representing the shop’s sustainability performance")
+        help_text=_("A score representing the shop's sustainability performance"),
     )
 
     class Meta:
@@ -72,6 +80,7 @@ class Shop(models.Model):
     def active_deals_count(self):
         """Get count of active deals for this shop."""
         from django.utils import timezone
+
         return self.deals.filter(
             is_verified=True,
             start_date__lte=timezone.now(),
@@ -82,6 +91,7 @@ class Shop(models.Model):
     def featured_deals(self):
         """Get featured deals for this shop."""
         from django.utils import timezone
+
         return self.deals.filter(
             is_verified=True,
             is_featured=True,
@@ -95,7 +105,13 @@ class Shop(models.Model):
 
     def update_rating(self):
         """Update shop rating based on reviews."""
+        # Since there might not be a reviews relationship in testing,
+        # we need to handle that case gracefully
+        if not hasattr(self, "reviews"):
+            return self.rating
+
         from django.db.models import Avg
+
         avg_rating = (
             self.reviews.filter(is_approved=True).aggregate(avg=Avg("rating"))["avg"]
             or 0
@@ -103,3 +119,21 @@ class Shop(models.Model):
         self.rating = round(avg_rating, 2)
         self.save(update_fields=["rating"])
         return self.rating
+
+
+class Review(models.Model):
+    """
+    Represents a customer review for a shop.
+    """
+
+    shop = models.ForeignKey(Shop, on_delete=models.CASCADE, related_name="reviews")
+    user = models.ForeignKey(
+        "accounts.User", on_delete=models.SET_NULL, null=True, blank=True
+    )
+    rating = models.DecimalField(max_digits=3, decimal_places=1, default=5.0)
+    is_approved = models.BooleanField(default=False)
+    comment = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Review of {self.shop.name} by {self.user or 'Anonymous'}"

@@ -5,19 +5,19 @@ This file centralizes all Wagtail API endpoints and routers.
 """
 
 from django.urls import path
-from rest_framework import filters, permissions, viewsets
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-
-from wagtail.api.v2.views.pages import PagesAPIViewSet
-from wagtail.api.v2.views.documents import DocumentsAPIViewSet
-from wagtail.api.v2.views.images import ImagesAPIViewSet
+# Updated imports for Wagtail 6
 from wagtail.api.v2.router import WagtailAPIRouter
-
+from wagtail.api.v2.views import PagesAPIViewSet
+from wagtail.documents.api.v2.views import DocumentsAPIViewSet
+from wagtail.images.api.v2.views import ImagesAPIViewSet
 
 from api.v1.serializers.deals import DealListSerializer, DealSerializer
-from api.v1.serializers.products import ProductListSerializer, ProductSerializer
+from api.v1.serializers.products import (ProductListSerializer,
+                                         ProductSerializer)
 from api.v1.serializers.shops import ShopListSerializer, ShopSerializer
 from apps.deals.models import Deal
 from apps.products.models import Product
@@ -26,18 +26,23 @@ from apps.shops.models import Shop
 # Create the API router with a namespace
 api_router = WagtailAPIRouter("wagtailapi")
 
+
 # Register endpoints
 api_router.register_endpoint("pages", PagesAPIViewSet)
 api_router.register_endpoint("images", ImagesAPIViewSet)
 api_router.register_endpoint("documents", DocumentsAPIViewSet)
 
 
-
 class ShopWagtailViewSet(viewsets.ModelViewSet):
     """ViewSet for Shop model with Wagtail CMS integration."""
+
     queryset = Shop.objects.all()
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
     filterset_fields = ["categories", "is_verified", "is_featured"]
     search_fields = ["name", "description", "short_description"]
     ordering_fields = ["created_at", "name", "rating"]
@@ -67,9 +72,9 @@ class ShopWagtailViewSet(viewsets.ModelViewSet):
             deals, many=True, context=self.get_serializer_context()
         )
 
-        products = Product.objects.filter(
-            shop=shop, is_available=True
-        ).order_by("-is_featured", "-created_at")[:6]
+        products = Product.objects.filter(shop=shop, is_available=True).order_by(
+            "-is_featured", "-created_at"
+        )[:6]
         product_serializer = ProductListSerializer(
             products, many=True, context=self.get_serializer_context()
         )
@@ -84,9 +89,14 @@ class ShopWagtailViewSet(viewsets.ModelViewSet):
 
 class ProductWagtailViewSet(viewsets.ModelViewSet):
     """ViewSet for Product model with Wagtail CMS integration."""
+
     queryset = Product.objects.all()
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
     filterset_fields = {
         "shop": ["exact"],
         "categories": ["exact"],

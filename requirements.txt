@@ -86,3 +86,7 @@ rich
 pyotp
 qrcode
 scrapy==2.11.1
+
+
+openai
+langdetect

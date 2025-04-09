@@ -1,9 +1,8 @@
 from django.urls import path, reverse
 from django.utils import timezone
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-
+from rest_framework.response import Response
+from rest_framework.views import APIView
 from wagtail import hooks
 from wagtail.admin.ui.components import Component
 
@@ -18,6 +17,7 @@ class ShopOwnerDashboardView(APIView):
 
     Returns JSON data for use by your Vite/TypeScript frontend.
     """
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
@@ -34,7 +34,9 @@ class ShopOwnerDashboardView(APIView):
             shop = shops.first()
             dashboard_data["shop"] = shop.id
             dashboard_data["total_products"] = Product.objects.filter(shop=shop).count()
-            dashboard_data["active_products"] = Product.objects.filter(shop=shop, is_available=True).count()
+            dashboard_data["active_products"] = Product.objects.filter(
+                shop=shop, is_available=True
+            ).count()
 
             active_deals = Deal.objects.filter(
                 shop=shop,
@@ -45,28 +47,40 @@ class ShopOwnerDashboardView(APIView):
             dashboard_data["active_deals_count"] = active_deals.count()
 
             dashboard_data["low_stock_products"] = list(
-                Product.objects.filter(shop=shop, is_available=True, stock_quantity__lt=10)
+                Product.objects.filter(
+                    shop=shop, is_available=True, stock_quantity__lt=10
+                )
                 .order_by("stock_quantity")
                 .values_list("id", flat=True)[:5]
             )
             dashboard_data["top_viewed_products"] = list(
-                Product.objects.filter(shop=shop).order_by("-view_count").values_list("id", flat=True)[:5]
+                Product.objects.filter(shop=shop)
+                .order_by("-view_count")
+                .values_list("id", flat=True)[:5]
             )
             dashboard_data["top_purchased_products"] = list(
-                Product.objects.filter(shop=shop).order_by("-purchase_count").values_list("id", flat=True)[:5]
+                Product.objects.filter(shop=shop)
+                .order_by("-purchase_count")
+                .values_list("id", flat=True)[:5]
             )
             dashboard_data["recent_products"] = list(
-                Product.objects.filter(shop=shop).order_by("-created_at").values_list("id", flat=True)[:5]
+                Product.objects.filter(shop=shop)
+                .order_by("-created_at")
+                .values_list("id", flat=True)[:5]
             )
 
             category_stats = []
             for category in shop.categories.all():
-                products_count = Product.objects.filter(shop=shop, categories=category).count()
+                products_count = Product.objects.filter(
+                    shop=shop, categories=category
+                ).count()
                 if products_count > 0:
-                    category_stats.append({
-                        "name": category.name,
-                        "products_count": products_count,
-                    })
+                    category_stats.append(
+                        {
+                            "name": category.name,
+                            "products_count": products_count,
+                        }
+                    )
             dashboard_data["category_stats"] = category_stats
 
         return Response(dashboard_data)
@@ -76,7 +90,11 @@ class ShopOwnerDashboardView(APIView):
 def register_dashboard_url():
     """Register the shop owner dashboard URL in the admin."""
     return [
-        path("shop-dashboard/", ShopOwnerDashboardView.as_view(), name="shop_owner_dashboard"),
+        path(
+            "shop-dashboard/",
+            ShopOwnerDashboardView.as_view(),
+            name="shop_owner_dashboard",
+        ),
     ]
 
 
@@ -85,7 +103,13 @@ def hide_pages_for_shop_owners(request, menu_items):
     """Hide menu items not relevant to shop owners."""
     user = request.user
     if not user.is_staff and hasattr(user, "shops") and user.shops.exists():
-        allowed_menu_items = ["dashboard", "shop-management", "products", "images", "documents"]
+        allowed_menu_items = [
+            "dashboard",
+            "shop-management",
+            "products",
+            "images",
+            "documents",
+        ]
         menu_items[:] = [item for item in menu_items if item.name in allowed_menu_items]
 
 
@@ -95,8 +119,10 @@ def add_shop_stats_panel(request, panels):
     user = request.user
     if not user.is_staff and hasattr(user, "shops") and user.shops.exists():
         return [
-            Component({
-                "request": request,
-                "redirect_url": reverse("shop_owner_dashboard"),
-            })
+            Component(
+                {
+                    "request": request,
+                    "redirect_url": reverse("shop_owner_dashboard"),
+                }
+            )
         ]
