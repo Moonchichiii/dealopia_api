@@ -1,16 +1,17 @@
 from __future__ import annotations
 
+import django.db.models
 from typing import Any, Dict, Optional, Union
 
-import django.contrib.auth
-import django.core.cache
-import django.db.models
-import django.utils.crypto
+# Third-party imports
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.db.models import Prefetch
 from django.utils.crypto import get_random_string
+from django_otp.plugins.otp_totp.models import TOTPDevice  # Added missing import
+from rest_framework_simplejwt.tokens import RefreshToken  # Added missing import
 
+# Local application imports
 from apps.categories.models import Category
 from apps.deals.services import DealService
 from apps.shops.models import Shop
@@ -18,6 +19,32 @@ from core.utils.cache import cache_result
 from core.utils.errors import ServiceError
 
 User = get_user_model()
+
+
+class AuthService:
+    """Service for authentication-related operations."""
+
+    @staticmethod
+    def issue_tokens_for_user(user: User) -> Dict[str, str]:
+        """Generate and return tokens for a user."""
+        refresh = RefreshToken.for_user(user)
+        return {
+            "refresh": str(refresh),
+            "access": str(refresh.access_token),
+        }
+
+    @staticmethod
+    def verify_two_factor(user_id: int, token: str) -> Union[Dict[str, str], bool]:
+        """Verify a 2FA token."""
+        try:
+            user = User.objects.get(id=user_id)
+            # Assuming only one TOTP device per user for simplicity
+            device = TOTPDevice.objects.get(user=user, confirmed=True)
+            if device.verify_token(token):
+                return AuthService.issue_tokens_for_user(user)
+            return False
+        except (User.DoesNotExist, TOTPDevice.DoesNotExist):
+            return False
 
 
 class UserService:
@@ -46,7 +73,6 @@ class UserService:
                 )
                 .get(id=user_id)
             )
-
             return user
         except User.DoesNotExist:
             raise ServiceError(f"User with ID {user_id} not found", code="not_found")
@@ -173,6 +199,9 @@ class UserService:
         try:
             user = User.objects.get(email=email)
             token = get_random_string(length=32)
+            # Note: This token should be stored securely (e.g., cache, dedicated model)
+            # with an expiry and linked to the user for verification later.
+            # Returning it directly like this is insecure if not handled properly by the caller.
             return {"user_id": user.id, "token": token}
         except User.DoesNotExist:
             return None

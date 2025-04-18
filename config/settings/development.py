@@ -1,7 +1,7 @@
 from .base import *  # noqa: F403
 
 # Core settings
-DEBUG = True
+DEBUG = False
 
 # Debug toolbar configuration
 INSTALLED_APPS += ["debug_toolbar"]  # noqa: F405

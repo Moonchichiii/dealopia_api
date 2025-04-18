@@ -102,6 +102,9 @@ MIDDLEWARE = [
     "wagtail.contrib.redirects.middleware.RedirectMiddleware",
 ]
 
+
+
+
 # External API Keys
 GOOGLE_PLACES_API_KEY = config("GOOGLE_PLACES_API_KEY", default="dummy_key")
 
@@ -132,10 +135,18 @@ WAGTAIL_API_LIMIT_MAX = 50
 WAGTAILIMAGES_IMAGE_MODEL = "cms.CloudinaryImage"
 
 SITE_ID = 1
+
+CSRF_TRUSTED_ORIGINS = ["http://localhost:5173"]
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
 ]
+
+CSRF_USE_SESSIONS = False
+CSRF_COOKIE_HTTPONLY = False
+CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_SAMESITE = 'Lax'
+
 
 OPENAI_API_KEY= config('OPENAI_API_KEY')
 
@@ -232,9 +243,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # JWT Settings
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
-    "ROTATE_REFRESH_TOKENS": False,
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
     "UPDATE_LAST_LOGIN": True,
     "AUTH_COOKIE": "auth-token",

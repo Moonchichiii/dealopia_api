@@ -7,7 +7,7 @@ from api.v1.views.auth import (CustomTokenObtainPairView, SessionInfoView,
                                SocialAuthCallbackView,
                                TokenRefreshRateLimitedView,
                                TwoFactorDisableView, TwoFactorSetupView,
-                               TwoFactorVerifyView)
+                               TwoFactorVerifyView,LogoutView)
 from api.v1.views.categories import CategoryViewSet
 from api.v1.views.deals import DealViewSet
 from api.v1.views.locations import LocationViewSet
@@ -29,7 +29,7 @@ router.register(r"locations", LocationViewSet)
 # Authentication related routes
 auth_patterns = [
     path("login/", CustomTokenObtainPairView.as_view(), name="login"),
-    path("logout/", include("dj_rest_auth.urls")),
+    path("logout/", LogoutView.as_view(), name="logout"),
     path("registration/", include("dj_rest_auth.registration.urls")),
     re_path(
         r"^registration/account-confirm-email/(?P<key>[-:\w]+)/",
