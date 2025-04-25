@@ -8,8 +8,8 @@ from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.db.models import Prefetch
 from django.utils.crypto import get_random_string
-from django_otp.plugins.otp_totp.models import TOTPDevice  # Added missing import
-from rest_framework_simplejwt.tokens import RefreshToken  # Added missing import
+from django_otp.plugins.otp_totp.models import TOTPDevice
+from rest_framework_simplejwt.tokens import RefreshToken
 
 # Local application imports
 from apps.categories.models import Category
