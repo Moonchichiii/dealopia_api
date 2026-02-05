@@ -1,12 +1,13 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react-swc';
-import path from 'path';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { VitePWA } from 'vite-plugin-pwa';
 import tailwindcss from '@tailwindcss/vite';
-import { fileURLToPath } from 'url';
 
-// Fix for __dirname in ESM monorepo
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Use this pattern for ESM compatibility
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default defineConfig({
   // Point explicitly to the source root
@@ -28,7 +29,7 @@ export default defineConfig({
         name: 'Dealopia',
         short_name: 'Dealopia',
         description: 'Eco-friendly marketplace for local deals',
-        theme_color: '#0f172a', // Deep slate from your JS config
+        theme_color: '#0f172a',
         background_color: '#ffffff',
         display: 'standalone',
         icons: [
@@ -54,7 +55,7 @@ export default defineConfig({
   },
 
   server: {
-    port: 3000, // Standardizing on 3000
+    port: 3000,
     strictPort: true,
     host: true,
     proxy: {
