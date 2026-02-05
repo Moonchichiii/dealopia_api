@@ -6,9 +6,9 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "bun --filter \"*\" dev",
-    "build": "bun --filter \"*\" build",
-    "lint": "bun --filter \"*\" lint",
-    "test": "bun --filter \"*\" test"
+    "dev": "bun --filter '*' --parallel dev",
+    "build": "bun --filter '*' build",
+    "lint": "bun --filter '*' lint",
+    "test": "bun --filter '*' test"
   }
 }

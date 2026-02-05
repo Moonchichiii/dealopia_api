@@ -1,5 +1,75 @@
+[project]
+name = "dealopia-monorepo"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+  "Django>=5.1.6,<6.0",
+  "djangorestframework",
+  "djangorestframework-simplejwt",
+  "django-filter",
+  "django-cors-headers",
+  "drf-spectacular",
+  "django-otp",
+  "wagtail",
+  "wagtailmedia",
+  "wagtail-generic-chooser",
+  "django-unfold",
+  "psycopg2-binary",
+  "dj-database-url",
+  "django-pgfields",
+  "GDAL",
+  "django-leaflet",
+  "redis",
+  "django-redis",
+  "celery",
+  "kombu",
+  "django-allauth",
+  "django-oauth-toolkit",
+  "social-auth-app-django",
+  "django-storages",
+  "Pillow",
+  "python-magic",
+  "cloudinary",
+  "django-rosetta",
+  "django-parler",
+  "django-modeltranslation",
+  "django-prometheus",
+  "django-debug-toolbar",
+  "scout-apm",
+  "sentry-sdk",
+  "uvicorn",
+  "httpx",
+  "asgiref",
+  "beautifulsoup4",
+  "requests",
+  "pyppeteer",
+  "selenium",
+  "django-csp",
+  "django-axes",
+  "django-honeypot",
+  "pytest",
+  "pytest-django",
+  "factory-boy",
+  "coverage",
+  "locust",
+  "python-dateutil",
+  "python-decouple",
+  "django-environ",
+  "django-extensions",
+  "django-lifecycle",
+  "rich",
+  "pyotp",
+  "qrcode",
+  "scrapy==2.11.1",
+  "openai",
+  "langdetect",
+]
+
 [tool.uv.workspace]
 members = ["apps/api"]
+
+[tool.uv.sources]
+dealopia-api = { workspace = true }
 
 [tool.uv]
 default-groups = []

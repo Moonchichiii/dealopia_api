@@ -1,0 +1,7 @@
+{
+  "name": "@dealopia/api",
+  "private": true,
+  "scripts": {
+    "dev": "PYTHONPATH=apps/api python apps/api/manage.py runserver"
+  }
+}
