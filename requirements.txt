@@ -1,3 +1,0 @@
-# Compatibility shim for legacy workflows.
-# Preferred install: `uv sync` or `uv pip install -e .`
--e .
