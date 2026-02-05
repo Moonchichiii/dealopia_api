@@ -23,6 +23,10 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
 
+    /* Allow JavaScript files */
+    "allowJs": true,
+    "checkJs": false,
+
     /* Path Aliases (Matching your Vite config) */
     "paths": {
       "@/*": ["./src/*"],
@@ -36,5 +40,5 @@
     },
     "ignoreDeprecations": "5.0"
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts", "src/**/*.js", "src/**/*.jsx"]
 }
