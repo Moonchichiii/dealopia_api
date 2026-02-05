@@ -1,4 +1,18 @@
 {
+  "name": "dealopia-monorepo",
+  "private": true,
+  "packageManager": "bun@1.1.38",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "bun --filter @dealopia/client dev",
+    "build": "bun run --filter '*' build",
+    "test": "bun run --filter '*' test",
+    "lint": "bun run --filter '*' lint",
+    "typecheck": "bun run --filter '*' typecheck",
+    "format": "bun run --filter '*' format"
   "name": "dealopia_client",
   "private": true,
   "version": "0.0.0",

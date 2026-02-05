@@ -1,0 +1,16 @@
+{
+  "name": "@dealopia/shared",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "build": "echo 'shared package build pending integration'",
+    "test": "echo 'shared package tests pending integration'",
+    "lint": "echo 'shared package lint pending integration'",
+    "typecheck": "echo 'shared package typecheck pending integration'",
+    "format": "echo 'shared package format pending integration'"
+  }
+}
