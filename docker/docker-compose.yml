@@ -1,0 +1,68 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: dealopia
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  api:
+    build:
+      context: ..
+      dockerfile: docker/api.Dockerfile
+    environment:
+      DATABASE_URL: postgis://postgres:postgres@db:5432/dealopia
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key}
+      DJANGO_SETTINGS_MODULE: config.settings
+      PYTHONPATH: /app/apps/api
+    volumes:
+      - ../apps/api:/app/apps/api
+      - static_volume:/app/apps/api/static
+      - media_volume:/app/apps/api/media
+    depends_on:
+      - db
+      - redis
+    expose:
+      - "8000"
+
+  client:
+    build:
+      context: ..
+      dockerfile: docker/client.Dockerfile
+    environment:
+      VITE_API_URL: /api
+    volumes:
+      - ../apps/client:/app/apps/client
+      - ../packages/shared:/app/packages/shared
+    expose:
+      - "5173"
+
+  nginx:
+    build:
+      context: ..
+      dockerfile: infra/nginx/Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+      - client
+    volumes:
+      - static_volume:/var/www/static
+      - media_volume:/var/www/media
+
+volumes:
+  postgres_data:
+  static_volume:
+  media_volume:

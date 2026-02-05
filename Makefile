@@ -1,25 +1,31 @@
-.PHONY: bootstrap install test migrate runserver web-install web-dev web-build
+.PHONY: bootstrap install test migrate runserver api-dev client-dev dev compose-up compose-down
 
 bootstrap:
 	./scripts/bootstrap.sh
 
 install:
-	pip install -e .
+	uv pip install -e .
 
 test:
-	PYTHONPATH=services/backend pytest
+	PYTHONPATH=apps/api pytest
 
 migrate:
-	python services/backend/manage.py migrate
+	python apps/api/manage.py migrate
 
 runserver:
-	python services/backend/manage.py runserver
+	python apps/api/manage.py runserver
 
-web-install:
-	pnpm install
+api-dev:
+	python apps/api/manage.py runserver
 
-web-dev:
-	pnpm --filter @dealopia/web dev
+client-dev:
+	bun --filter @dealopia/client dev
 
-web-build:
-	pnpm --filter @dealopia/web build
+dev:
+	@echo "Run API and Client in separate terminals: make api-dev / make client-dev"
+
+compose-up:
+	docker compose -f docker/docker-compose.yml up --build
+
+compose-down:
+	docker compose -f docker/docker-compose.yml down

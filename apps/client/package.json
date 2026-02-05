@@ -1,0 +1,25 @@
+{
+  "name": "@dealopia/client",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "echo 'frontend tests pending integration'",
+    "lint": "echo 'frontend lint pending integration'",
+    "typecheck": "echo 'frontend typecheck pending integration'",
+    "format": "echo 'frontend format pending integration'"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "vite": "^5.4.10",
+    "@vitejs/plugin-react": "^4.3.2",
+    "vite-plugin-pwa": "^0.20.5",
+    "vite-imagetools": "^7.0.4"
+  }
+}

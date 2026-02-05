@@ -60,6 +60,7 @@ dependencies = [
   "locust",
   "python-dateutil",
   "python-decouple",
+  "django-environ",
   "django-extensions",
   "django-lifecycle",
   "rich",
@@ -75,6 +76,10 @@ include-package-data = true
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings"
-pythonpath = ["services/backend"]
+pythonpath = ["apps/api"]
 python_files = ["tests.py", "test_*.py", "*_tests.py"]
-testpaths = ["services/backend/tests"]
+testpaths = ["apps/api/tests"]
+
+
+[tool.uv]
+package = true

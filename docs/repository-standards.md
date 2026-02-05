@@ -1,56 +1,34 @@
 # Repository standards
 
-## 1) Monorepo layout
+## Monorepo architecture (Turborepo-style)
 
-- `services/`: deployable services (backend/API, workers, etc.).
-- `apps/`: user-facing applications (web/mobile/admin).
-- `packages/`: reusable shared packages.
-- `docs/`: ADRs, standards, architecture docs.
-- `scripts/`: automation for setup, CI helpers, and release scripts.
+- `apps/api`: Django backend service.
+- `apps/client`: React/Vite frontend app.
+- `packages/shared`: shared frontend/backend JS modules.
+- `infra/nginx`: reverse-proxy and edge configuration.
+- `docker`: image definitions and compose orchestration.
 
-### Current service/app mapping
+## Naming conventions
 
-- Backend API: `services/backend`
-- Frontend app workspace: `apps/web`
-
-## 2) Naming conventions
-
+- JS/TS folders: `kebab-case`
+- React components: `PascalCase`
 - Python modules/packages: `snake_case`
-- JS/TS package names: scoped lowercase (for example `@dealopia/web`)
-- Directories: lowercase with hyphen only when conventional for tooling
-- Environment files: `.env.<environment>` (example: `.env.development`)
+- Environment files: `.env.<environment>`
 
-## 3) Tooling standards
+## Tooling standards
 
-- Python dependency metadata lives in `pyproject.toml`.
-- JS workspaces are managed at the root via `pnpm-workspace.yaml`.
-- Prefer repo-root commands to avoid path drift between local and CI.
+- Python dependency and metadata are managed in `pyproject.toml` and installed via `uv`.
+- JavaScript workspaces are managed via `bun` with root `workspaces`.
+- CI validates API and client independently before image build.
 
-## 4) Command standards
+## Frontend architecture standard
 
-Use root-level commands:
+Use Feature-Sliced Design baseline in `apps/client/src`:
+- `entities/`
+- `features/`
+- `shared/`
 
-```bash
-# backend
-python services/backend/manage.py runserver
-PYTHONPATH=services/backend pytest
+## Infrastructure standard
 
-# frontend workspaces
-pnpm install
-pnpm dev
-```
-
-## 5) CI/CD standards
-
-- CI must install from root and run backend and frontend checks independently.
-- Service Docker contexts must point to each service directory.
-- Avoid embedding environment-specific secrets in config files.
-
-## 6) Growth guidelines
-
-When adding new units:
-
-1. New customer-facing app -> `apps/<app-name>`
-2. New shared library -> `packages/<package-name>`
-3. New deployable backend unit -> `services/<service-name>`
-4. New standards/process docs -> `docs/`
+- Nginx must terminate edge traffic and route API/admin/client paths.
+- Compose manifests should live in `docker/`.
