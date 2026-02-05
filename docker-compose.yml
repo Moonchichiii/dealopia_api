@@ -37,11 +37,11 @@ services:
   # Backend Django API
   api:
     build:
-      context: ./api
+      context: ./services/backend
       dockerfile: Dockerfile
     command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4
     volumes:
-      - ./api:/app
+      - ./services/backend:/app
       - static_volume:/app/static
       - media_volume:/app/media
     expose:
@@ -65,11 +65,11 @@ services:
   # Celery worker for background tasks
   celery:
     build:
-      context: ./api
+      context: ./services/backend
       dockerfile: Dockerfile
     command: celery -A config worker -l info
     volumes:
-      - ./api:/app
+      - ./services/backend:/app
     environment:
       - DEBUG=False
       - DATABASE_URL=postgis://postgres:postgres@db:5432/dealopia
@@ -86,11 +86,11 @@ services:
   # Celery beat for scheduled tasks
   celery-beat:
     build:
-      context: ./api
+      context: ./services/backend
       dockerfile: Dockerfile
     command: celery -A config beat -l info
     volumes:
-      - ./api:/app
+      - ./services/backend:/app
     environment:
       - DEBUG=False
       - DATABASE_URL=postgis://postgres:postgres@db:5432/dealopia

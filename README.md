@@ -32,17 +32,19 @@ The API is built with Django and Django REST Framework. It leverages JWT authent
 ## 📂 Project Structure
 
 ```plaintext
-dealopia/
-├── backend/
-│   ├── config/        # Project settings and URL routing
-│   ├── apps/          # Core apps: accounts, deals, shops, locations, etc.
-│   ├── api/           # REST API (v1 endpoints, serializers, views)
-│   ├── core/          # Utilities, middleware, and custom model managers
-│   ├── templates/     # HTML templates (admin & Wagtail)
-│   ├── static/        # Static assets
-│   ├── locale/        # Translation files
-│   ├── media/         # User uploaded files
-│   └── manage.py      # Django management script
+dealopia_api/
+├── services/
+│   └── backend/
+│       ├── api/       # REST API (v1 endpoints, serializers, views)
+│       ├── apps/      # Domain apps: accounts, deals, shops, locations, etc.
+│       ├── config/    # Django settings and URL routing
+│       ├── core/      # Shared backend utilities and middleware
+│       ├── tests/     # Backend test suite
+│       └── manage.py  # Django management entrypoint
+├── apps/              # Monorepo app workspace (frontend/mobile - planned)
+├── packages/          # Shared packages/libs workspace (planned)
+├── pyproject.toml     # Unified Python project/dependency configuration
+└── README.md
 ```
 
 ## ⚡ Features
@@ -68,8 +70,10 @@ dealopia/
 ### 1. Install Dependencies
 
 ```bash
-pip install -r requirements.txt
+pip install -e .
 ```
+
+> `requirements.txt` is kept as a compatibility shim and now installs from `pyproject.toml`.
 
 ### 2. Database Setup
 
@@ -78,13 +82,13 @@ pip install -r requirements.txt
 - Run migrations:
 
 ```bash
-python manage.py migrate
+python services/backend/manage.py migrate
 ```
 
 ### 3. Run the Development Server
 
 ```bash
-python manage.py runserver
+python services/backend/manage.py runserver
 ```
 
 ### 4. Running Background Tasks
@@ -92,7 +96,7 @@ python manage.py runserver
 - Start a Celery worker to handle asynchronous tasks:
 
 ```bash
-celery -A backend worker -l info
+PYTHONPATH=services/backend celery -A config worker -l info
 ```
 
 ## 🧪 Testing
@@ -100,13 +104,13 @@ celery -A backend worker -l info
 ### Unit Tests
 
 ```bash
-python manage.py test
+python services/backend/manage.py test
 ```
 
 Run specific test cases:
 
 ```bash
-python manage.py test apps.deals.tests
+python services/backend/manage.py test apps.deals.tests
 ```
 
 ### Integration Tests
@@ -114,15 +118,11 @@ python manage.py test apps.deals.tests
 End-to-end test coverage for critical API workflows:
 
 ```bash
-pytest
+PYTHONPATH=services/backend pytest
 ```
 
 ### Performance Testing
 
 Load testing with Locust to ensure API performance under stress:
 
-```bash
-locust -f tests/locust/locustfile.py
-```
-
-Then access the Locust web interface at `http://localhost:8089` to configure and start your tests.
+Locust configuration is planned as part of the monorepo performance suite setup.
