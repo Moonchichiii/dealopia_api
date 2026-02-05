@@ -1,34 +1,56 @@
 # Repository standards
 
-## Monorepo layout
+## 1) Monorepo layout
 
-- `services/`: deployable backend services.
-- `apps/`: product-facing applications (web/mobile).
-- `packages/`: shared libraries consumed by services/apps.
-- `docs/`: architecture and onboarding docs.
-- `scripts/`: automation scripts used in local dev and CI.
+- `services/`: deployable services (backend/API, workers, etc.).
+- `apps/`: user-facing applications (web/mobile/admin).
+- `packages/`: reusable shared packages.
+- `docs/`: ADRs, standards, architecture docs.
+- `scripts/`: automation for setup, CI helpers, and release scripts.
 
-## Naming conventions
+### Current service/app mapping
 
-- Python packages and modules use `snake_case`.
-- Django apps use plural, descriptive names (`deals`, `shops`, `locations`).
-- Environment files use `.env.<environment>` (example: `.env.development`).
-- Root-level files use lowercase, hyphenated names unless required by tooling.
+- Backend API: `services/backend`
+- Frontend app workspace: `apps/web`
 
-## Backend location
+## 2) Naming conventions
 
-The Django backend source lives in `services/backend/`.
-Run commands from the repository root with explicit paths, for example:
+- Python modules/packages: `snake_case`
+- JS/TS package names: scoped lowercase (for example `@dealopia/web`)
+- Directories: lowercase with hyphen only when conventional for tooling
+- Environment files: `.env.<environment>` (example: `.env.development`)
+
+## 3) Tooling standards
+
+- Python dependency metadata lives in `pyproject.toml`.
+- JS workspaces are managed at the root via `pnpm-workspace.yaml`.
+- Prefer repo-root commands to avoid path drift between local and CI.
+
+## 4) Command standards
+
+Use root-level commands:
 
 ```bash
+# backend
 python services/backend/manage.py runserver
+PYTHONPATH=services/backend pytest
+
+# frontend workspaces
+pnpm install
+pnpm dev
 ```
 
-## Migration guideline for frontend integration
+## 5) CI/CD standards
 
-When adding the frontend repo into this monorepo:
+- CI must install from root and run backend and frontend checks independently.
+- Service Docker contexts must point to each service directory.
+- Avoid embedding environment-specific secrets in config files.
 
-1. Place it under `apps/web/`.
-2. Move reusable UI helpers to `packages/ui/`.
-3. Add shared API client code to `packages/api-client/`.
-4. Keep deployment manifests in service/app directories, not repo root.
+## 6) Growth guidelines
+
+When adding new units:
+
+1. New customer-facing app -> `apps/<app-name>`
+2. New shared library -> `packages/<package-name>`
+3. New deployable backend unit -> `services/<service-name>`
+4. New standards/process docs -> `docs/`

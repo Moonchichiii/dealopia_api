@@ -1,0 +1,13 @@
+{
+  "name": "@dealopia/web",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "echo 'Wire your frontend dev server here (e.g., vite dev)'",
+    "build": "echo 'Wire your frontend build command here'",
+    "test": "echo 'Wire your frontend tests here'",
+    "lint": "echo 'Wire your frontend linting here'",
+    "format": "echo 'Wire your frontend formatting here'",
+    "typecheck": "echo 'Wire your frontend typechecking here'"
+  }
+}

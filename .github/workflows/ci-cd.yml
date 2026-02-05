@@ -37,7 +37,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gdal-bin libgdal-dev python3-gdal
 
-      - name: Install dependencies
+      - name: Install backend dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -e .
@@ -48,11 +48,31 @@ jobs:
           DJANGO_SETTINGS_MODULE: config.settings.test
           PYTHONPATH: services/backend
           SECRET_KEY: test-secret-key
+        run: pytest
+
+  validate-workspaces:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+      - name: Install workspace deps
+        run: pnpm install --frozen-lockfile=false
+      - name: Validate workspace scripts
         run: |
-          pytest
+          pnpm -r --if-present lint
+          pnpm -r --if-present test
+          pnpm -r --if-present build
 
   build-and-push-backend:
-    needs: [test-backend]
+    needs: [test-backend, validate-workspaces]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 

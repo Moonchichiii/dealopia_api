@@ -1,10 +1,10 @@
-# 🚀 Dealopia API
+# 🚀 Dealopia Monorepo
 
 > Full-stack project connecting communities with local deals they'll love
 
-Dealopia is a community-focused platform for discovering the best local deals on clothes, books, wellness, and more. This backend powers the Dealopia API, enabling fast, reliable access to deals, shop profiles, and geolocation-based searches.
+Dealopia is a community-focused platform for discovering the best local deals on clothes, books, wellness, and more. This repository is now the **Dealopia monorepo**, with the Django backend living in `services/backend` and workspace support for the frontend and shared packages.
 
-- [Frontend Repository](https://github.com/Moonchichiii/dealopia_client)
+- [Legacy Frontend Repository](https://github.com/Moonchichiii/dealopia_client)
 
 ## 📋 Table of Contents
 
@@ -14,10 +14,11 @@ Dealopia is a community-focused platform for discovering the best local deals on
 - [⚡ Features](#-features)
 - [🚦 Getting Started](#-getting-started)
 - [🧪 Testing](#-testing)
+- [🏗️ Monorepo Workspaces](#️-monorepo-workspaces)
 
 ## ✨ Overview
 
-The API is built with Django and Django REST Framework. It leverages JWT authentication (with OAuth social logins), a robust PostgreSQL/PostGIS database for location queries, Redis caching, and Celery for background tasks such as web scraping and notifications. Our focus is on performance, real-time search, and a highly responsive user experience.
+The backend API is built with Django and Django REST Framework. It leverages JWT authentication (with OAuth social logins), a robust PostgreSQL/PostGIS database for location queries, Redis caching, and Celery for background tasks such as web scraping and notifications. Our focus is on performance, real-time search, and a highly responsive user experience.
 
 ## 🛠️ Technologies
 
@@ -41,8 +42,13 @@ dealopia_api/
 │       ├── core/      # Shared backend utilities and middleware
 │       ├── tests/     # Backend test suite
 │       └── manage.py  # Django management entrypoint
-├── apps/              # Monorepo app workspace (frontend/mobile - planned)
-├── packages/          # Shared packages/libs workspace (planned)
+├── apps/
+│   └── web/           # Frontend app workspace
+├── packages/          # Shared packages/libs workspace
+├── docs/              # Architecture and standards documentation
+├── scripts/           # Automation utilities
+├── package.json       # JS workspace root
+├── pnpm-workspace.yaml
 ├── pyproject.toml     # Unified Python project/dependency configuration
 └── README.md
 ```
@@ -99,6 +105,12 @@ python services/backend/manage.py runserver
 PYTHONPATH=services/backend celery -A config worker -l info
 ```
 
+### 5. Monorepo JavaScript Workspaces (Frontend + Shared Packages)
+
+```bash
+pnpm install
+```
+
 ## 🧪 Testing
 
 ### Unit Tests
@@ -126,3 +138,11 @@ PYTHONPATH=services/backend pytest
 Load testing with Locust to ensure API performance under stress:
 
 Locust configuration is planned as part of the monorepo performance suite setup.
+
+## 🏗️ Monorepo Workspaces
+
+- `apps/web`: frontend application (integrated workspace location).
+- `packages/*`: shared frontend/backend utilities and client SDKs.
+- `services/backend`: Django API service.
+
+Use repo-root commands and workspace tooling to keep backend and frontend changes aligned.
