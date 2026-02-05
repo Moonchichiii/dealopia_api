@@ -4,7 +4,7 @@ bootstrap:
 	./scripts/bootstrap.sh
 
 install:
-	uv pip install --system -e apps/api
+	uv sync --project apps/api
 
 test:
 	PYTHONPATH=apps/api pytest -c apps/api/pytest.ini
