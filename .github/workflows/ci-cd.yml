@@ -1,4 +1,4 @@
-name: Dealopia Backend CI/CD
+name: Dealopia Frontend CI/CD
 
 on:
   push:
@@ -9,47 +9,36 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgis/postgis:15-3.3
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: test_db
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
+    
     steps:
     - uses: actions/checkout@v3
     
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
       with:
-        python-version: '3.11'
+        node-version: '20'
         
-    - name: Install GDAL dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y gdal-bin libgdal-dev python3-gdal
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: 8
         
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pytest pytest-django
+        pnpm install
+        
+    - name: Lint
+      run: |
+        pnpm lint
+        
+    - name: Type check
+      run: |
+        pnpm exec tsc
         
     - name: Run tests
-      env:
-        DATABASE_URL: postgis://postgres:postgres@localhost:5432/test_db
-        DJANGO_SETTINGS_MODULE: config.settings.test
-        SECRET_KEY: ${{ secrets.TEST_SECRET_KEY }}
       run: |
-        pytest
+        pnpm exec playwright install --with-deps chromium
+        pnpm test:e2e
 
   build-and-push:
     needs: [test]
@@ -68,12 +57,12 @@ jobs:
         username: ${{ secrets.DOCKER_HUB_USERNAME }}
         password: ${{ secrets.DOCKER_HUB_TOKEN }}
         
-    - name: Build and push backend
+    - name: Build and push frontend
       uses: docker/build-push-action@v4
       with:
         context: .
         push: true
-        tags: ${{ secrets.DOCKER_HUB_USERNAME }}/dealopia-api:latest
+        tags: ${{ secrets.DOCKER_HUB_USERNAME }}/dealopia-client:latest
 
   deploy:
     needs: build-and-push
@@ -89,5 +78,5 @@ jobs:
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
           cd /path/to/deployment
-          docker-compose pull api
-          docker-compose up -d api
+          docker-compose pull client
+          docker-compose up -d client

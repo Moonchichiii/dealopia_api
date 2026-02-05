@@ -1,128 +1,54 @@
-# 🚀 Dealopia API
+# React + TypeScript + Vite
 
-> Full-stack project connecting communities with local deals they'll love
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-Dealopia is a community-focused platform for discovering the best local deals on clothes, books, wellness, and more. This backend powers the Dealopia API, enabling fast, reliable access to deals, shop profiles, and geolocation-based searches.
+Currently, two official plugins are available:
 
-- [Frontend Repository](https://github.com/Moonchichiii/dealopia_client)
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-## 📋 Table of Contents
+## Expanding the ESLint configuration
 
-- [🔍 Overview](#-overview)
-- [🛠️ Technologies](#️-technologies)
-- [📂 Project Structure](#-project-structure)
-- [⚡ Features](#-features)
-- [🚦 Getting Started](#-getting-started)
-- [🧪 Testing](#-testing)
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-## ✨ Overview
-
-The API is built with Django and Django REST Framework. It leverages JWT authentication (with OAuth social logins), a robust PostgreSQL/PostGIS database for location queries, Redis caching, and Celery for background tasks such as web scraping and notifications. Our focus is on performance, real-time search, and a highly responsive user experience.
-
-## 🛠️ Technologies
-
-- **Backend Framework:** Django 5.1.6, Django REST Framework
-- **Authentication:** JWT, OAuth social logins
-- **Admin & CMS:** Unfold, Wagtail
-- **Database:** PostgreSQL with PostGIS (for geolocation)
-- **Caching & Queue:** Redis, Celery
-- **Performance:** Optimized queries (select_related, prefetch_related), custom SQL where needed
-- **Internationalization:** Django's i18n framework with language middleware
-
-## 📂 Project Structure
-
-```plaintext
-dealopia/
-├── backend/
-│   ├── config/        # Project settings and URL routing
-│   ├── apps/          # Core apps: accounts, deals, shops, locations, etc.
-│   ├── api/           # REST API (v1 endpoints, serializers, views)
-│   ├── core/          # Utilities, middleware, and custom model managers
-│   ├── templates/     # HTML templates (admin & Wagtail)
-│   ├── static/        # Static assets
-│   ├── locale/        # Translation files
-│   ├── media/         # User uploaded files
-│   └── manage.py      # Django management script
+```js
+export default tseslint.config({
+  extends: [
+    // Remove ...tseslint.configs.recommended and replace with this
+    ...tseslint.configs.recommendedTypeChecked,
+    // Alternatively, use this for stricter rules
+    ...tseslint.configs.strictTypeChecked,
+    // Optionally, add this for stylistic rules
+    ...tseslint.configs.stylisticTypeChecked,
+  ],
+  languageOptions: {
+    // other options...
+    parserOptions: {
+      project: ['./tsconfig.node.json', './tsconfig.app.json'],
+      tsconfigRootDir: import.meta.dirname,
+    },
+  },
+})
 ```
 
-## ⚡ Features
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-### High Performance
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
 
-- Aggressive caching using Redis
-- Optimized database queries with proper indexing and query optimizations
-- Asynchronous background processing with Celery for tasks like web scraping and notifications
-
-### Robust API
-
-- RESTful endpoints with versioning, pagination, and dynamic field filtering
-- Secure JWT authentication and OAuth social logins
-- Custom permissions and middleware (including language detection)
-
-### Internationalization
-
-- Built-in i18n support with language files and middleware for user preferences
-
-## 🚦 Getting Started
-
-### 1. Install Dependencies
-
-```bash
-pip install -r requirements.txt
+export default tseslint.config({
+  plugins: {
+    // Add the react-x and react-dom plugins
+    'react-x': reactX,
+    'react-dom': reactDom,
+  },
+  rules: {
+    // other rules...
+    // Enable its recommended typescript rules
+    ...reactX.configs['recommended-typescript'].rules,
+    ...reactDom.configs.recommended.rules,
+  },
+})
 ```
-
-### 2. Database Setup
-
-- Ensure PostgreSQL (with PostGIS extension) is installed and configured
-- Update your `.env` file with your database settings
-- Run migrations:
-
-```bash
-python manage.py migrate
-```
-
-### 3. Run the Development Server
-
-```bash
-python manage.py runserver
-```
-
-### 4. Running Background Tasks
-
-- Start a Celery worker to handle asynchronous tasks:
-
-```bash
-celery -A backend worker -l info
-```
-
-## 🧪 Testing
-
-### Unit Tests
-
-```bash
-python manage.py test
-```
-
-Run specific test cases:
-
-```bash
-python manage.py test apps.deals.tests
-```
-
-### Integration Tests
-
-End-to-end test coverage for critical API workflows:
-
-```bash
-pytest
-```
-
-### Performance Testing
-
-Load testing with Locust to ensure API performance under stress:
-
-```bash
-locust -f tests/locust/locustfile.py
-```
-
-Then access the Locust web interface at `http://localhost:8089` to configure and start your tests.
