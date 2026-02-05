@@ -1,0 +1,14 @@
+{
+  "name": "dealopia-monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "bun --filter \"*\" dev",
+    "build": "bun --filter \"*\" build",
+    "lint": "bun --filter \"*\" lint",
+    "test": "bun --filter \"*\" test"
+  }
+}

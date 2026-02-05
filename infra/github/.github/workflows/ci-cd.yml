@@ -1,0 +1,100 @@
+name: Dealopia Monorepo CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test-api:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+      - name: Install system geospatial packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gdal-bin libgdal-dev python3-gdal
+      - name: Install API dependencies
+        run: uv pip install --system -e apps/api
+      - name: Run API tests
+        env:
+          DATABASE_URL: postgis://postgres:postgres@localhost:5432/test_db
+          DJANGO_SETTINGS_MODULE: config.settings.test
+          PYTHONPATH: apps/api
+          SECRET_KEY: test-secret-key
+        run: pytest -c apps/api/pytest.ini
+
+  test-client:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.1.38'
+      - name: Install workspaces
+        run: bun install
+      - name: Run workspace checks
+        run: |
+          bun run lint
+          bun run test
+          bun run build
+
+  build-and-push-api:
+    needs: [test-api, test-client]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+      - name: Build and push API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/api.Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/dealopia-api:latest
+
+  deploy:
+    needs: build-and-push-api
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /path/to/deployment
+            docker compose -f docker/docker-compose.yml pull api
+            docker compose -f docker/docker-compose.yml up -d api
