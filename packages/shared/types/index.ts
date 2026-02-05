@@ -20,5 +20,6 @@ export interface Deal {
   shopId: string
   title: string
   discountPercent: number
+  sustainability_score?: number
   expiresAt?: string
 }

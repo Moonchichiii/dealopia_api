@@ -7,6 +7,7 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+import dj_database_url
 from decouple import config
 from django.utils.translation import gettext_lazy as _
 
@@ -172,21 +173,20 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 
 # Database & GeoDjango Settings
+DATABASE_URL = config(
+    "DATABASE_URL",
+    default="postgis://postgres:postgres@localhost:5432/dealopia",
+)
 DATABASES = {
-    "default": {
-        "ENGINE": "django.contrib.gis.db.backends.postgis",
-        "NAME": "dealopia",
-        "USER": "postgres",
-        "PASSWORD": config("DB_PASSWORD"),
-        "HOST": "localhost",
-        "PORT": "5433",
-        "CONN_MAX_AGE": 600,
-        "OPTIONS": {"sslmode": "prefer"},
-    }
+    "default": dj_database_url.parse(
+        DATABASE_URL,
+        engine="django.contrib.gis.db.backends.postgis",
+        conn_max_age=600,
+    )
 }
-SPATIALITE_LIBRARY_PATH = "mod_spatialite"
-GDAL_LIBRARY_PATH = "C:/OSGeo4W/bin/gdal310.dll"
-GEOS_LIBRARY_PATH = "C:/OSGeo4W/bin/geos_c.dll"
+SPATIALITE_LIBRARY_PATH = config("SPATIALITE_LIBRARY_PATH", default="mod_spatialite")
+GDAL_LIBRARY_PATH = config("GDAL_LIBRARY_PATH", default="") or None
+GEOS_LIBRARY_PATH = config("GEOS_LIBRARY_PATH", default="") or None
 
 # Authentication & Password Validation
 AUTH_PASSWORD_VALIDATORS = [
