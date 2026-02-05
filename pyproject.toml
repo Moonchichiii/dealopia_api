@@ -1,85 +1,33 @@
 [build-system]
-requires = ["setuptools>=69", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "dealopia-api"
 version = "0.1.0"
-description = "Backend API for the Dealopia platform"
-readme = "README.md"
-requires-python = ">=3.10"
+description = "Eco-Marketplace Engine: Django 6.0 + Wagtail 7.3"
+requires-python = ">=3.12"
 dependencies = [
-  "Django>=5.1.6,<6.0",
-  "djangorestframework",
-  "djangorestframework-simplejwt",
-  "django-filter",
-  "django-cors-headers",
-  "drf-spectacular",
-  "django-otp",
-  "wagtail",
-  "wagtailmedia",
-  "wagtail-generic-chooser",
-  "django-unfold",
-  "psycopg2-binary",
-  "dj-database-url",
-  "django-pgfields",
-  "GDAL",
-  "django-leaflet",
-  "redis",
-  "django-redis",
-  "celery",
-  "kombu",
-  "django-allauth",
-  "django-oauth-toolkit",
-  "social-auth-app-django",
-  "django-storages",
-  "Pillow",
-  "python-magic",
-  "cloudinary",
-  "django-rosetta",
-  "django-parler",
-  "django-modeltranslation",
-  "django-prometheus",
-  "django-debug-toolbar",
-  "scout-apm",
-  "sentry-sdk",
-  "uvicorn",
-  "httpx",
-  "asgiref",
-  "beautifulsoup4",
-  "requests",
-  "pyppeteer",
-  "selenium",
-  "django-csp",
-  "django-axes",
-  "django-honeypot",
-  "pytest",
-  "pytest-django",
-  "factory-boy",
-  "coverage",
-  "locust",
-  "python-dateutil",
-  "python-decouple",
-  "django-environ",
-  "django-extensions",
-  "django-lifecycle",
-  "rich",
-  "pyotp",
-  "qrcode",
-  "scrapy==2.11.1",
-  "openai",
-  "langdetect",
+  "django>=6.0a0",
+  "wagtail>7.0",
+  "djangorestframework>=3.15.2",
+  "drf-spectacular>=0.28.0",
+  "django-cors-headers>=4.6.0",
+  "psycopg[binary]>=3.2.0",  # Psycopg 3 (New Standard)
+  "pydantic-settings>=2.7.1",
+  "uvicorn[standard]>=0.34.0",
+  "whitenoise>=6.8.0",
+  "django-lifecycle>=1.2.0",
+  "pillow>=11.1.0",
+  "python-decouple>=3.8",
 ]
 
-[tool.setuptools]
-include-package-data = true
+[tool.uv]
+managed = true
+package = false
+workspace = { members = ["apps/api"] }
+prerelease = "allow" # Required to fetch Django 6.0 alphas/betas
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "config.settings"
+DJANGO_SETTINGS_MODULE = "config.settings.development"
 pythonpath = ["apps/api"]
-python_files = ["tests.py", "test_*.py", "*_tests.py"]
-testpaths = ["apps/api/tests"]
-
-
-[tool.uv]
-package = true
